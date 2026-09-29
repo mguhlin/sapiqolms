@@ -7,7 +7,8 @@ and issue badges and CPE certificates.
 
 **[Project website](https://mguhlin.github.io/sapiqolms/) ·
 [Download](https://github.com/mguhlin/sapiqolms/releases) ·
-[User manual](sapiqo/docs/manual/README.md) · [Code audit](docs/CODE_AUDIT.md)**
+[User manual](sapiqo/docs/manual/README.md) · [Code audit](docs/CODE_AUDIT.md) ·
+[Planned roadmap](docs/ROADMAP.md)**
 
 Version **1.12.1**. Original project material: **© 2026 Miguel Guhlin · CC BY-SA 4.0**.
 
