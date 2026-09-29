@@ -1,0 +1,14 @@
+# Local config with secrets
+app/config.local.php
+
+# Writable runtime data (DB, generated badges)
+data/
+!data/.gitkeep
+
+# Bundled/served course copy (large; deploy separately). Symlink for dev.
+public/courses
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log

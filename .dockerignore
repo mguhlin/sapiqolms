@@ -1,0 +1,13 @@
+.git/
+.github/
+tests/
+site/
+docs/
+*.log
+node_modules/
+sapiqo-data/
+**/config.local.php
+**/.env*
+**/*.sqlite*
+**/*.pem
+**/*.key

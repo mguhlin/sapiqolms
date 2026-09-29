@@ -1,0 +1,5 @@
+# Sapiqo scheduled jobs — add with `crontab -e` (adjust the path).
+# Nightly enrollment-expiry sweep (soft-unenroll past-window learners):
+0 2 * * *  php /opt/courses/sapiqo/bin/expire.php
+# Nightly backup of the data root:
+30 2 * * * php /opt/courses/sapiqo/bin/backup.php

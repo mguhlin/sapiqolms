@@ -1,0 +1,16 @@
+# Simple systemd service using PHP's built-in server, behind an nginx/Apache
+# reverse proxy. Copy to /etc/systemd/system/sapiqo.service, edit paths, then:
+#   systemctl daemon-reload && systemctl enable --now sapiqo
+[Unit]
+Description=Sapiqo LMS
+After=network.target
+
+[Service]
+Environment=SAPIQO_DATA=/opt/courses/sapiqo-data
+ExecStart=/usr/bin/php -d max_execution_time=0 -S 127.0.0.1:8000 -t /opt/courses/sapiqo/public /opt/courses/sapiqo/public/router.php
+Restart=always
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

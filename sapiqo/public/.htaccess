@@ -1,0 +1,40 @@
+# Sapiqo — Apache front-controller routing.
+# Static files (course pages, assets, videos) are served directly; everything
+# else is routed to index.php. Works under a subdirectory too.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  RewriteRule ^courses(?:/|$) index.php [L]
+  RewriteRule (^|/)\. - [F]
+
+  # Serve existing files and directories as-is (courses, assets, badges, etc.).
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Route all other requests to the front controller.
+  RewriteRule ^ index.php [L]
+</IfModule>
+
+# Correct MIME type for WebVTT captions (older Apache configs).
+AddType text/vtt .vtt
+
+# Do not serve the SQLite database or dotfiles.
+<FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm)$">
+  Require all denied
+</FilesMatch>
+
+# Allow large course/SCORM/Common Cartridge uploads (mod_php only; php-fpm uses .user.ini).
+<IfModule mod_php.c>
+  php_value upload_max_filesize 1024M
+  php_value post_max_size 1056M
+  php_value memory_limit 512M
+  php_value max_execution_time 0
+</IfModule>
+<IfModule mod_php7.c>
+  php_value upload_max_filesize 1024M
+  php_value post_max_size 1056M
+  php_value memory_limit 512M
+  php_value max_execution_time 0
+</IfModule>

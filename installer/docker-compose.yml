@@ -1,0 +1,40 @@
+# Sapiqo — one-command turnkey run:
+#     docker compose -f installer/docker-compose.yml up -d --build
+# Set ADMIN_EMAIL and ADMIN_PASSWORD in your environment, then open http://localhost:8080.
+#
+# SQLite is the default (zero config). For MySQL, uncomment the `db` service and
+# the DB_* env below, and set a config.local.php via the data volume.
+name: sapiqo
+
+services:
+  sapiqo:
+    build:
+      context: ..                      # the courses/ root
+      dockerfile: installer/Dockerfile
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL before starting Docker}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set a strong ADMIN_PASSWORD before starting Docker}
+      ADMIN_FIRST: Admin
+      ADMIN_LAST: User
+    volumes:
+      - sapiqo-data:/data              # DB, badges, avatars, LTI keys — persists
+      - ../content:/srv/content        # courses (created/edited courses persist on the host)
+    restart: unless-stopped
+
+  # --- Optional MySQL (uncomment to use instead of SQLite) ------------------
+  # db:
+  #   image: mariadb:11
+  #   environment:
+  #     MARIADB_DATABASE: sapiqo
+  #     MARIADB_USER: sapiqo
+  #     MARIADB_PASSWORD: sapiqo_pw
+  #     MARIADB_ROOT_PASSWORD: root_pw
+  #   volumes:
+  #     - sapiqo-db:/var/lib/mysql
+  #   restart: unless-stopped
+
+volumes:
+  sapiqo-data:
+  # sapiqo-db:
