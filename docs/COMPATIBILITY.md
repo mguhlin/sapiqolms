@@ -4,14 +4,17 @@
 
 For 1.13.0, “tested” means the specific checks below, not complete certification.
 The [Verify workflow](../.github/workflows/verify.yml) gates Pages deployment.
+All six jobs passed in the [1.13.0 release run](https://github.com/mguhlin/sapiqolms/actions/runs/36725641715)
+on September 30, 2026. See [the roadmap's remaining work](ROADMAP.md#current-release-and-remaining-work)
+for the next validation priorities.
 
 | Area | Evidence / scope | Status |
 | --- | --- | --- |
 | Linux/PHP/SQLite | Security and HTTP suite, full recovery, eight-worker contention, upgrade/rollback | Tested locally |
-| MariaDB / PDO MySQL | Disposable server; schema 22, reset/quiz/MFA contention, assignments, rubric/score completion, dump/restore | Tested locally |
-| PHP 8.1, 8.3, 8.4 | Regression matrix in GitHub Actions | Release requires green CI |
-| Docker/Apache | Image build, first administrator login, readiness page in GitHub Actions | Release requires green CI |
-| Chromium | Desktop/mobile introduction; author/learner assignment lifecycle; certificates; SCORM parent isolation; MFA/revocation | Tested locally; repeated in CI |
+| MariaDB / PDO MySQL | Disposable server; schema 22, reset/quiz/MFA/assignment contention, assignments, rubric/score completion, dump/restore | Passed locally and in release CI |
+| PHP 8.1, 8.3, 8.4 | Regression matrix in GitHub Actions | Passed in release CI |
+| Docker/Apache | Image build, first administrator login, readiness page in GitHub Actions | Passed in release CI |
+| Chromium | Desktop/mobile introduction; author/learner assignment lifecycle; certificates; SCORM parent isolation; MFA/revocation | Passed locally and in release CI |
 | SMTP | Local protocol fixture, message headers and dot-stuffing | Protocol tested; real TLS/provider delivery unverified |
 | Native course JSON | Protected reader, progress, quizzes, authoring, assignment integration | Tested fixtures; actual imported course review still required |
 | SCORM 1.2 / 2004 | Basic API shim and completion bridge, opaque-origin fixture, score/completion recorded | Basic fixture tested; full standard conformance not claimed |

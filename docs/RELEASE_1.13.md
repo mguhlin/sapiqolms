@@ -46,9 +46,11 @@ own host; the local demo uses SQLite and MariaDB is an optional configured backe
   schema 22, then code rolled back; users, configuration and courses preserved.
 - PHP syntax, shipped JavaScript syntax, shell syntax and Python checks.
 
-GitHub Actions adds PHP 8.1/8.3/8.4 coverage and a Docker/Apache build/login check.
-The workflow must be green before Pages publication. Refer to the actual run
-status rather than assuming a configured CI job has already passed.
+All six [GitHub Actions release jobs](https://github.com/mguhlin/sapiqolms/actions/runs/36725641715)
+passed on September 30, 2026: PHP 8.1/8.3/8.4 regression, Chromium, MariaDB,
+and Docker/Apache build/login/readiness. The verified release commit is
+`0285f0a5326c5e8cc4ffd7fc6169affea803b8e9`. Pages deployment succeeded.
+The [roadmap](ROADMAP.md#current-release-and-remaining-work) lists remaining work.
 
 ## Material limits
 

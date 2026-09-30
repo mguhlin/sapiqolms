@@ -14,6 +14,37 @@ certifications are already available. The sequence matters more than dates;
 the original 12-week estimate is illustrative. Implementation and verification
 will be recorded below as work lands.
 
+## Current release and remaining work
+
+Updated September 30, 2026. [Version 1.13.0](https://github.com/mguhlin/sapiqolms/releases/tag/v1.13.0)
+delivered the main account-security, recovery, authoring and teaching features.
+All six [release verification jobs](https://github.com/mguhlin/sapiqolms/actions/runs/36725641715)
+passed: PHP 8.1/8.3/8.4, Chromium, MariaDB and Docker/Apache. Complete
+backup/restore, concurrency and upgrade/rollback checks passed. These completed
+checks are not outstanding roadmap items.
+
+The following work remains open, in the recommended order. Each item stays open
+until its acceptance evidence is recorded; there are no promised completion dates.
+
+| Order | Remaining work | Completion evidence / dependencies |
+| --- | --- | --- |
+| 1 | Accessibility review and fixes | Complete learner, author and admin tasks by keyboard; check focus, labels, errors, contrast, zoom and touch targets; perform screen-reader review against the WCAG 2.2 AA target |
+| 2 | Firefox and Safari coverage | Run core account, authoring, assessment and certificate journeys; fix failures; actual Safari testing requires a suitable Apple environment |
+| 3 | Representative course-package compatibility | Import/export real SCORM, Common Cartridge, LearnDash and OneRoster examples; check navigation, resources, questions, completion and re-entry; document unsupported behavior |
+| 4 | Broader SCORM support and isolation review | Assess separate-origin hosting and implement or explicitly bound sequencing, suspend-data and nested/network package behavior; basic shim tests do not establish full conformance |
+| 5 | Live identity and LTI interoperability | Test configured SSO linking/login/logout and LTI launch/grade passback with real providers; requires credentials and a reachable test installation; certification remains optional follow-up |
+| 6 | Email and scheduled reminders | Verify SMTP TLS delivery and scheduled deadline reminders end to end; record duplicate suppression and delivery failures; requires a configured mail provider and scheduler |
+| 7 | Additional hosting environments | Demonstrate installation, login, upgrades and complete recovery on nginx and Windows/IIS before claiming tested support |
+| 8 | Organizational pilots and capacity | Two or three organizations complete the pilot protocol; measure install time, resume navigation, task failures, support needs and representative concurrent workload |
+
+Sapiqo is self-hosted: users provide their own machine/server, with SQLite for
+local use or their own configured MariaDB backend. GitHub Pages publishes the
+website and downloads. A centrally hosted LMS or public demo is outside the
+current publication scope.
+
+Use [Compatibility](COMPATIBILITY.md) for tested boundaries and
+[Pilot protocol](PILOT_PROTOCOL.md) for the remaining acceptance checks.
+
 ## Delivery plan
 
 | Priority | Phase | Work | Acceptance criteria |
@@ -21,7 +52,7 @@ will be recorded below as work lands.
 | P0 | Production foundation | Isolate active course content; administrator MFA; session revocation; scoped API keys; verified account linking; complete backups; supported deployment checks; focused service extraction | Security regression suite passes; database and course recovery demonstrated; environment evidence recorded |
 | P1 | Excellent core experience | Operator readiness guide; course templates; publication validation; learner next activity/deadlines; accessible forms and navigation | Install → publish → enroll → assess → certify journey passes; new capabilities work by keyboard |
 | P2 | Teaching workflows | Assignment submissions/resubmissions; reusable rubrics; feedback and gradebook integration; cohort deadlines and late rules; clear completion requirements; actionable reports | An instructor can deliver and assess a complete course using the new workflow |
-| P3 | Verified integrations and release readiness | Provider and import compatibility matrix; concurrency checks; update/recovery checks; pilot and accessibility protocols; hosted demonstration deployment instructions | Each capability has an explicit tested/not-tested status; real-provider and pilot evidence required before claiming validation |
+| P3 | Verified integrations and release readiness | Provider and import compatibility matrix; concurrency checks; update/recovery checks; pilot and accessibility protocols; self-hosted distribution and local demo | Each capability has an explicit tested/not-tested status; real-provider and pilot evidence required before claiming validation |
 
 ## P0: production foundation
 
@@ -86,7 +117,7 @@ will be recorded below as work lands.
 | Complete backup/recovery and relocation | Implemented and tested | `tests/run.py`, `tests/recovery.py`, `tests/mysql.py` |
 | MFA, revocation, scoped keys and verified SSO linking | Implemented; real SSO callback validation pending | Security/HTTP/browser tests; account services |
 | Trusted shells and active-content isolation | Opaque-origin sandbox and basic SCORM bridge implemented/tested | Browser parent-access test; separate-origin/full SCORM interoperability remains follow-up |
-| Supported environment checks | Local SQLite/MariaDB passed; expanded CI required for release | PHP matrix, browser and Docker/Apache workflow |
+| Supported environment checks | Passed locally and in release CI | PHP 8.1/8.3/8.4, Chromium, MariaDB and Docker/Apache; release run linked above |
 | Readiness, templates, publication checklist, next activity | Implemented and browser-tested | Learning services and browser journeys |
 | Assignments, rubrics, feedback, completion gates | Implemented and tested | Security/HTTP/browser/MariaDB checks |
 | Instructor grants and protected attachments | Implemented and boundary-tested | Explicit course access; HTTP private-file checks |
