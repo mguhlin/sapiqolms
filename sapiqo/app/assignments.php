@@ -5,7 +5,9 @@ require_once __DIR__ . '/gradebook.php';
 function learning_utc(string $value): ?string {
     if (trim($value) === '') return null;
     if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(Z|[+-]\d{2}:\d{2})$/D', $value)) throw new InvalidArgumentException('Use an ISO date with timezone, such as 2026-10-01T17:00:00-05:00.');
-    $date = new DateTimeImmutable($value); if (DateTimeImmutable::getLastErrors() !== false) throw new InvalidArgumentException('Invalid date.');
+    $date = new DateTimeImmutable($value);
+    $errors = DateTimeImmutable::getLastErrors();
+    if ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) throw new InvalidArgumentException('Invalid date.');
     return $date->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
 }
 function rubric_parse(string $text): array {
