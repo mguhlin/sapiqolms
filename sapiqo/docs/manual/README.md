@@ -23,6 +23,9 @@ Everything a course participant needs.
 | [Notifications](06-notifications.md) | In-app and email notifications, expiry reminders |
 | [Redeeming an enrollment code](07-redeeming-a-code.md) | Unlocking course(s) with a code — at sign-up, from a link, or on your dashboard |
 
+| [Assignments & feedback](08-assignments-and-feedback.md) | Drafts, attachments, submissions, rubric scores and completion |
+| [Account security](09-account-security.md) | MFA, recovery codes, sessions and linked identities |
+
 ## For course developers
 
 Building and maintaining course content.
@@ -34,6 +37,8 @@ Building and maintaining course content.
 | [The resource center](12-resource-center.md) | Uploading and reusing images, video, and PDFs in a course |
 | [The gradebook](13-gradebook.md) | Custom assessments, the scores grid, letter grades, CSV export |
 | [Markdown authoring](14-markdown-authoring.md) | Building a course from a single Markdown file with the course creator |
+
+| [Assignments, rubrics & cohorts](15-assignments-rubrics-cohorts.md) | Instructor access, grading, release/deadlines and late work |
 
 ## For administrators — people & access
 

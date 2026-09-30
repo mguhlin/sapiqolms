@@ -71,6 +71,8 @@
             <details class="kebab">
               <summary class="btn btn-outline btn-sm" title="More actions" aria-label="More actions">⋯</summary>
               <div class="kebab-menu">
+                <a href="<?= e(url('/admin/courses/' . $c['slug'] . '/checklist')) ?>">Publication checklist</a>
+                <a href="<?= e(url('/admin/assignments/' . $c['slug'])) ?>">Assignments and rubrics</a>
                 <a href="<?= e(url('/admin/editor/' . urlencode($c['slug']) . '#settings')) ?>">⚙ Course settings</a>
                 <form method="post" action="<?= e(url('/admin/courses/' . urlencode($c['slug']) . '/status')) ?>" style="margin:0">
                   <?= csrf_field() ?>

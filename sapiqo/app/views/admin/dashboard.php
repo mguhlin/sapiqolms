@@ -8,6 +8,7 @@ $rows = array_map(fn($b) => ['label' => $b['label'], 'values' => [$b['registered
 ?>
 <?= hero_banner('admin', 'Administration', 'Manage users, enrollment, and completion.') ?>
 
+<div class="card"><a class="btn btn-outline" href="<?= e(url('/admin/readiness')) ?>">Installation readiness</a> <a class="btn btn-outline" href="<?= e(url('/admin/learning-report')) ?>">Learners needing attention</a></div>
 <div class="stats">
   <div class="stat"><b><?= (int)$stats['users'] ?></b><span>Total users</span></div>
   <div class="stat"><b><?= (int)$stats['learners'] ?></b><span>Learners</span></div>

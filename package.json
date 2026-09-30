@@ -1,0 +1,7 @@
+{
+  "name": "sapiqo-lms-checks",
+  "private": true,
+  "description": "Development-only browser checks; no Node dependency for running Sapiqo LMS",
+  "scripts": {"test": "python3 tests/run.py && python3 tests/concurrency.py", "test:browser": "python3 tests/browser.py"},
+  "devDependencies": {"playwright": "1.62.1"}
+}

@@ -69,6 +69,7 @@ function send_mail(string $to, string $subject, string $body): bool {
 // so an admin can verify settings before turning it on).
 function mail_send_diagnostic(string $to, string $subject, string $body): array {
     $cfg = mail_config();
+    if (!filter_var($to,FILTER_VALIDATE_EMAIL) || !filter_var($cfg['from'],FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n\x00]/', $subject . $cfg['from_name'])) return [false,'Invalid email address or header.'];
     try {
         if (($cfg['transport'] ?? 'mail') === 'smtp') {
             return smtp_send($cfg, $to, $subject, $body);
@@ -88,6 +89,7 @@ function mail_send_diagnostic(string $to, string $subject, string $body): array 
 // common district relays and Gmail SMTP relay; for anything exotic, use a real
 // MTA via transport 'mail'. Returns [ok, detail] — see mail_send_diagnostic().
 function smtp_send(array $cfg, string $to, string $subject, string $body): array {
+    if (!filter_var($to,FILTER_VALIDATE_EMAIL) || !filter_var($cfg['from'],FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n\x00]/', $subject . $cfg['from_name'])) return [false,'Invalid email address or header.'];
     $s = $cfg['smtp'];
     $secure = strtolower((string) ($s['secure'] ?? ''));
     $host = ($secure === 'ssl' ? 'ssl://' : '') . $s['host'];

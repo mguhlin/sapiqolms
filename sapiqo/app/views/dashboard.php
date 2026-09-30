@@ -22,7 +22,10 @@
         <span class="muted"><?php if ($ms && is_file($msFile)): ?><img class="milestone-chip" src="<?= e(url("/assets/img/badges/milestone-$ms.png")) ?>" width="22" height="22" alt="" title="<?= $ms ?>% milestone"><?php endif; ?><?= $pct ?>% <?= e(t('dash.complete', 'complete')) ?>
           <?php if ($en['status'] === 'completed'): ?><span class="pill pill--done"><?= e(t('dash.completed', 'Completed')) ?></span>
           <?php else: ?><span class="pill pill--progress"><?= e(t('dash.in_progress', 'In progress')) ?></span><?php endif; ?>
-          <?php if ((int)$en['active'] === 0): ?><span class="pill pill--progress"><?= e(t('dash.unavailable', 'Unavailable')) ?></span><?php endif; ?>
+          <?php $next = learning_next_activity((int)$user['id'], course_by_id((int)$en['course_id'])); $assignments = assignment_list((int)$en['course_id']); ?>
+      <?php if ($assignments): ?><p><a href="<?= e(url('/assignments/'.$en['slug'])) ?>">Assignments and feedback</a></p><?php endif; ?>
+      <?php if ($next && $en['status'] !== 'completed'): ?><p>Next: <a href="<?= e($next['href']) ?>"><?= e($next['title']) ?></a></p><?php endif; ?>
+      <?php if ((int)$en['active'] === 0): ?><span class="pill pill--progress"><?= e(t('dash.unavailable', 'Unavailable')) ?></span><?php endif; ?>
           <?php if (!empty($en['last_seen_at'])): ?>
             · <span class="muted"><?= e(t('dash.last_active', 'Last active')) ?> <?= e(date('M j, Y', strtotime($en['last_seen_at']) ?: time())) ?></span>
           <?php endif; ?>
@@ -66,3 +69,5 @@
     </div>
   <?php endif; ?>
 </div>
+
+<?php $teaching=db_all('SELECT c.title,c.slug FROM courses c JOIN course_instructors i ON i.course_id=c.id WHERE i.user_id=?',[(int)$user['id']]); if ($teaching): ?><div class="card"><h2>Your teaching courses</h2><ul><?php foreach ($teaching as $course): ?><li><a href="<?= e(url('/admin/assignments/'.$course['slug'])) ?>"><?= e($course['title']) ?> — assignments and submissions</a></li><?php endforeach; ?></ul></div><?php endif; ?>

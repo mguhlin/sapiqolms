@@ -196,3 +196,14 @@ function scorm_write_player(string $outDir, string $title, string $version, stri
 </body></html>
 HTML);
 }
+
+// Trusted shell generated at request time, independent of package HTML.
+function scorm_player_html(array $data): string {
+    $entry = (string)($data['scorm']['entry'] ?? '');
+    if (!preg_match('#^scorm/[A-Za-z0-9_./%?=&+~\-]+$#D', $entry) || str_contains(rawurldecode($entry), '..')) throw new RuntimeException('Invalid SCORM launch path.');
+    $config = htmlspecialchars(json_encode(['entry'=>$entry, 'course'=>$data['slug']], JSON_THROW_ON_ERROR), ENT_QUOTES);
+    $title = htmlspecialchars((string)$data['title'], ENT_QUOTES);
+    $script = htmlspecialchars(url('/assets/js/scorm-player.js'), ENT_QUOTES);
+    $dashboard = htmlspecialchars(url('/dashboard'), ENT_QUOTES);
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.$title.'</title></head><body><header><a href="'.$dashboard.'">Dashboard</a><h1>'.$title.'</h1><p id="scorm-status" role="status">Preparing course…</p></header><main id="scorm-player" data-config="'.$config.'"><iframe id="scorm-frame" title="'.$title.'" sandbox="allow-scripts" style="width:100%;height:80vh;border:0"></iframe></main><script src="'.$script.'"></script></body></html>';
+}

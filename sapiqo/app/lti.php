@@ -204,7 +204,6 @@ function lti_launch(array $post): array {
     // Provision + log in the user.
     $user = lti_provision_user($claims, $platform);
     if (!$user) return [false, 'Could not provision the LTI user.'];
-    login_user($user);
     audit('lti.launch', ['actor_id' => (int) $user['id'], 'actor_email' => $user['email'], 'detail' => $platform['name']]);
 
     // Which course? A custom 'course' claim (slug) selects it.
@@ -215,8 +214,13 @@ function lti_launch(array $post): array {
     if ($course) {
         enroll((int) $user['id'], (int) $course['id']);
         lti_capture_ags((int) $user['id'], (int) $course['id'], $platform, $claims);
-        return [true, '/courses/' . $course['slug'] . '/'];
+        $target = '/courses/' . $course['slug'] . '/';
+        if (!empty($user['mfa_secret'])) $_SESSION['after_login'] = $target;
+        login_user($user);
+        return [true, $target];
     }
+    if (!empty($user['mfa_secret'])) $_SESSION['after_login'] = '/dashboard';
+    login_user($user);
     return [true, '/dashboard'];
 }
 

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 $root = dirname(__DIR__);
-foreach (['config','helpers','db','auth','courses','discovery','quiz','editor','serve','security','api','groups','orgs','lti','cc_import','oneroster','backup'] as $name) require_once "$root/sapiqo/app/$name.php";
+foreach (['config','helpers','db','auth','account_security','learning','notifications','courses','discovery','quiz','editor','serve','security','api','groups','orgs','lti','cc_import','oneroster','backup'] as $name) require_once "$root/sapiqo/app/$name.php";
 $checks = 0;
 function check(bool $ok, string $message): void {
     global $checks;
@@ -94,12 +94,64 @@ check(!empty($report['errors']), 'OneRoster extraction errors are reported');
 check(package_file(getenv('SAPIQO_COURSES'), '../../etc/passwd') === null, 'Cartridge manifest cannot read external files');
 $report=[];
 check(_cc_lesson_content(getenv('SAPIQO_COURSES'), '../config.local.php', getenv('SAPIQO_COURSES'), $report) === '', 'Cartridge missing/traversal gracefully rejected');
+$knownSecret = mfa_base32_encode('12345678901234567890');
+check(mfa_totp($knownSecret, 1, 8) === '94287082', 'RFC 6238 test vector');
+check(mfa_decrypt(mfa_encrypt($knownSecret)) === $knownSecret, 'MFA encryption round trip');
+check(mfa_counter($knownSecret, '000000', 59) === null, 'Incorrect TOTP rejected');
+db_run('UPDATE users SET mfa_secret=?,mfa_recovery=? WHERE id=?', [mfa_encrypt($knownSecret), json_encode([hash('sha256','recovery-test')]), $manager]);
+$code = mfa_totp($knownSecret, intdiv(time(),30));
+check(mfa_verify($manager, $code), 'MFA accepts fresh code');
+check(!mfa_verify($manager, $code), 'MFA rejects replay');
+check(mfa_verify($manager, 'recovery-test') && !mfa_verify($manager, 'recovery-test'), 'Recovery code is single-use');
+$_SESSION = ['uid'=>$uid, 'session_version'=>(int)db_one('SELECT session_version FROM users WHERE id=?',[$uid])['session_version']];
+check(current_user() !== null, 'Current session authenticates');
+revoke_user_sessions($uid);
+check(current_user() === null, 'Revoked session rejected');
+db_run('UPDATE users SET auth_provider=?,provider_sub=? WHERE id=?',['google','legacy-subject',$manager]);
+check(!identity_link($uid,'google','legacy-subject'),'Cannot steal an original provider identity');
+db_run('UPDATE users SET auth_provider=?,provider_sub=NULL WHERE id=?',['local',$manager]);
+check(identity_link($uid,'test','subject-1') && !identity_link($admin,'test','subject-1'), 'Identity cannot link to two accounts');
+[$scopedId, $scopedToken] = api_key_create('read only', $admin, ['courses:read']);
+$_SERVER['HTTP_AUTHORIZATION']='Bearer '.$scopedToken; $scoped=api_key_check();
+check(api_key_allows($scoped,'courses:read') && !api_key_allows($scoped,'users:write'), 'API scopes bound privileges');
+check(learning_utc('2026-10-01T17:00:00-05:00') === '2026-10-01 22:00:00', 'Timezone normalized to UTC');
+try { learning_utc('2026-02-30T17:00:00Z'); check(false,'Invalid date rejected'); } catch (InvalidArgumentException $e) { check(true,'Invalid date rejected'); }
+check(!empty(course_publication_checks(['slug'=>'empty','title'=>'Empty','modules'=>[]])['errors']), 'Empty course fails publication');
+$ac = course_by_slug('assignment'); $acid=(int)$ac['id'];
+[$ok,$auid]=register_local(['email'=>'assignment@example.org','password'=>'Assignment-password-123']);
+$aid=gb_add_assessment($acid,'Application','Assignment',100,null);
+$rubric=rubric_parse("Application | 60\nReflection | 40");
+db_run("UPDATE assessments SET submission_enabled=1,required_completion=1,rubric=?,allow_resubmit=1 WHERE id=?",[json_encode($rubric),$aid]);
+$a=gb_assessment($aid);
+foreach (course_all_step_ids('assignment') as $sid) record_progress($auid,$acid,$sid,true);
+check(course_percent($auid,$ac)===75 && !db_one('SELECT id FROM badges WHERE user_id=? AND course_id=?',[$auid,$acid]), 'Required assignment blocks certificate');
+assignment_save($a,$auid,'Draft reflection',false,0);
+check(assignment_submission($aid,$auid)['status']==='draft','Assignment draft persists');
+try { assignment_save($a,$auid,'Stale response',true,0); check(false,'Stale draft rejected'); } catch (InvalidArgumentException $e) { check(true,'Stale draft rejected'); }
+assignment_save($a,$auid,'Submitted reflection',true,1);
+assignment_grade($a,$auid,2,[30,20],null,'Please revise');
+check(course_percent($auid,$ac)===75,'Failing grade blocks completion');
+assignment_save($a,$auid,'Improved reflection',true,3);
+check(!db_one('SELECT id FROM assessment_scores WHERE assessment_id=? AND user_id=?',[$aid,$auid]), 'Resubmission clears old score');
+assignment_grade($a,$auid,4,[60,40],null,'Well done');
+check(course_percent($auid,$ac)===100 && (bool)db_one('SELECT id FROM badges WHERE user_id=? AND course_id=?',[$auid,$acid]),'Passing rubric issues credential');
+try { assignment_grade($a,$auid,4,[60,40],null,'Stale grade'); check(false,'Stale grading rejected'); } catch (InvalidArgumentException $e) { check(true,'Stale grading rejected'); }
+$ag=create_group('Assignment cohort'); add_member($ag,$auid);
+db_run("INSERT INTO cohort_schedules (group_id,course_id,opens_at,due_at,late_policy) VALUES (?,?,?,?,?)",[$ag,$acid,'2099-01-01 00:00:00','2099-01-02 00:00:00','accept']);
+check(course_access_error($auid,$ac)!==null,'Future cohort cannot access course');
+db_run('UPDATE cohort_schedules SET opens_at=NULL,due_at=?,late_policy=? WHERE group_id=? AND course_id=?',['2000-01-01 00:00:00','close',$ag,$acid]);
+check(assignment_due($a,$auid)==='2000-01-01 00:00:00','Cohort overrides assignment deadline');
+try { assignment_save($a,$auid,'Late',true,5); check(false,'Closed late submission rejected'); } catch (InvalidArgumentException $e) { check(true,'Closed late submission rejected'); }
+db_run('DELETE FROM cohort_schedules WHERE group_id=? AND course_id=?',[$ag,$acid]);
+check(!assignment_can_grade($acid,$manager),'Content access does not imply student-work access');
+db_run('INSERT INTO course_instructors (course_id,user_id) VALUES (?,?)',[$acid,$manager]);
+check(assignment_can_grade($acid,$manager) && !assignment_can_grade($cid,$manager),'Instructor access is course-scoped');
 $backup = create_backup(getenv('SAPIQO_DATA').'/backups');
 check(archive_entries_safe($backup), 'Backup passes archive validation');
 $backupContents = new PharData($backup);
-check(isset($backupContents['data-root/data/lms.sqlite']), 'Backup contains SQLite snapshot');
+check(isset($backupContents['db/snapshot.sqlite']), 'Backup contains SQLite snapshot');
 $restoredFile = getenv('SAPIQO_DATA').'/snapshot-check.sqlite';
-file_put_contents($restoredFile, $backupContents['data-root/data/lms.sqlite']->getContent());
+file_put_contents($restoredFile, $backupContents['db/snapshot.sqlite']->getContent());
 $snapshotDb = new PDO('sqlite:'.$restoredFile);
 check($snapshotDb->query('PRAGMA integrity_check')->fetchColumn() === 'ok', 'Backup snapshot integrity');
 check((int) $snapshotDb->query('SELECT COUNT(*) FROM users')->fetchColumn() >= 3, 'Snapshot retains users');

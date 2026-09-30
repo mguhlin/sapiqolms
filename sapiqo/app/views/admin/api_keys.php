@@ -17,6 +17,7 @@
     <label class="sr-only" for="name">Key name</label>
     <input id="name" name="name" placeholder="e.g. SIS sync, Reporting bot" required
            style="flex:1;min-width:220px;padding:9px 12px;border:1.5px solid var(--line-strong);border-radius:9px">
+    <fieldset><legend>Allowed operations</legend><?php foreach (api_key_scopes() as $scope): ?><label style="display:block"><input type="checkbox" name="scopes[]" value="<?= e($scope) ?>"<?= $scope === 'courses:read' ? ' checked' : '' ?>> <?= e($scope) ?></label><?php endforeach; ?></fieldset>
     <button class="btn btn-gold" type="submit">Create key</button>
   </form>
 </div>
@@ -31,7 +32,7 @@
         <tr><td colspan="6" class="muted">No API keys yet.</td></tr>
       <?php else: foreach ($keys as $k): ?>
         <tr>
-          <td><?= e($k['name']) ?></td>
+          <td><?= e($k['name']) ?><br><small><?= e($k['scopes'] === null ? 'Legacy full access — rotate this key' : implode(', ', json_decode($k['scopes'], true) ?: [])) ?></small></td>
           <td class="muted"><code><?= e($k['prefix']) ?>…</code></td>
           <td class="muted"><?= e($k['created_at']) ?></td>
           <td class="muted"><?= e($k['last_used_at'] ?: '—') ?></td>

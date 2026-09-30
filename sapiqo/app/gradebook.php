@@ -24,6 +24,7 @@ function gb_update_assessment(int $id, string $title, string $category, float $m
         [trim($title) ?: 'Untitled', trim($category), max(0.0, $max) ?: 100, $due ?: null, $id]);
 }
 function gb_delete_assessment(int $id): void {
+    db_run('DELETE FROM assignment_submissions WHERE assessment_id = ?', [$id]);
     db_run('DELETE FROM assessments WHERE id = ?', [$id]);
     db_run('DELETE FROM assessment_scores WHERE assessment_id = ?', [$id]);
 }

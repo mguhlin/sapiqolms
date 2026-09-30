@@ -1,5 +1,8 @@
 # Code audit — September 29, 2026
 
+> Historical baseline for 1.12.1. Subsequent fixes and current limitations are
+> recorded in [1.13 release verification](RELEASE_1.13.md).
+
 **Publication:** Sapiqo LMS 1.12.1, © 2026 Miguel Guhlin.
 
 ## Scope and method

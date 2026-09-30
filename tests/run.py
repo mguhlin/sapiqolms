@@ -15,7 +15,7 @@ with tempfile.TemporaryDirectory(prefix='sapiqo-tests-') as scratch:
           {'qid':'q0','text':'Choose A','options':[{'text':'A','correct':True},{'text':'B','correct':False}]},
           {'qid':'q1','text':'Choose B','options':[{'text':'A','correct':False},{'text':'B','correct':True}]}]}},
         {'id':'lesson-2','title':'Second','content':'<p>Finish</p>','topics':[]}]}]}
-    for slug, status in [('sample','published'),('draft','draft')]:
+    for slug, status in [('sample','published'),('draft','draft'),('assignment','published')]:
         folder=courses/slug; folder.mkdir(); obj=dict(sample, slug=slug, status=status)
         (folder/'course.json').write_text(json.dumps(obj));(folder/'index.html').write_text('<!doctype html><title>Sample</title>')
         (folder/'source.md').write_text('private answer source');(folder/'media').mkdir();(folder/'media/video.mp4').write_bytes(b'0123456789')
@@ -35,13 +35,16 @@ with tempfile.TemporaryDirectory(prefix='sapiqo-tests-') as scratch:
     env=dict(os.environ,SAPIQO_DATA=str(data),SAPIQO_COURSES=str(courses),SAPIQO_TEST_ARCHIVES=str(archives))
     run('php',str(ROOT/'tests/security.php'),env=env)
     restore_data=base/'restored';restore_data.mkdir()
+    restore_courses=base/'restored-content';restore_courses.mkdir()
     backup=next((data/'backups').glob('sapiqo-backup-*'))
-    run('php',str(ROOT/'sapiqo/bin/restore.php'),str(backup),'--force',env=dict(env,SAPIQO_DATA=str(restore_data)))
+    run('php',str(ROOT/'sapiqo/bin/restore.php'),str(backup),'--force',env=dict(env,SAPIQO_DATA=str(restore_data),SAPIQO_COURSES=str(restore_courses)))
     import sqlite3
     with sqlite3.connect(restore_data/'data/lms.sqlite') as db:
         assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
         assert db.execute('SELECT COUNT(*) FROM users').fetchone()[0]>=3
-    print('Backup/restore round trip passed',flush=True)
+    assert (restore_courses/'sample/course.json').read_bytes()==(courses/'sample/course.json').read_bytes()
+    assert (restore_courses/'sample/media/video.mp4').read_bytes()==b'0123456789'
+    print('Complete database/content backup/restore round trip passed',flush=True)
     import importlib.util
     spec=importlib.util.spec_from_file_location('course_builder',ROOT/'sapiqo/creator/build_course.py')
     builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
@@ -56,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix='sapiqo-tests-') as scratch:
         result=subprocess.run(['php','-l',str(file)],capture_output=True,text=True)
         if result.returncode: raise RuntimeError(result.stdout+result.stderr)
     for file in ROOT.rglob('*.sh'): run('bash','-n',str(file))
-    for file in [ROOT/'content/assets/js/reader.js',ROOT/'sapiqo/public/assets/js/app.js']: run('node','--check',str(file))
+    for file in list((ROOT/'content/assets/js').glob('*.js')) + list((ROOT/'sapiqo/public/assets/js').glob('*.js')): run('node','--check',str(file))
     compile((ROOT/'sapiqo/creator/build_course.py').read_text(), 'build_course.py', 'exec')
     print('PHP, JavaScript, shell, and Python syntax checks passed',flush=True)
     with socket.socket() as s:s.bind(('127.0.0.1',0));port=s.getsockname()[1]
@@ -120,6 +123,41 @@ with tempfile.TemporaryDirectory(prefix='sapiqo-tests-') as scratch:
         newwho=json.loads(req('/api/whoami',client=newclient)[2]);check(req('/admin',client=newclient)[0]==403,'Registration cannot grant admin')
         check(req('/courses/sample/course.json',client=newclient)[0]==403,'Paid content denied without enrollment')
         check(req('/courses/sample/media/video.mp4',client=newclient)[0]==403,'Paid media denied without enrollment')
+        # Exercise newly introduced boundaries through real browser sessions.
+        admincookies=http.cookiejar.CookieJar();adminclient=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(admincookies))
+        html=req('/login',client=adminclient)[2]
+        req('/login',urllib.parse.urlencode({'email':'admin@example.org','password':'Admin-password-123','_csrf':token(html)}).encode(),client=adminclient)
+        admincsrf=json.loads(req('/api/whoami',client=adminclient)[2])['csrf']
+        check(req('/admin/readiness',client=adminclient)[0]==200,'Operator readiness renders')
+        check(req('/admin/learning-report',client=adminclient)[0]==200,'Actionable report renders')
+        check(req('/admin/assignments/sample')[0]==403,'Learner cannot author assignments')
+        form=urllib.parse.urlencode([('name','Read courses'),('scopes[]','courses:read'),('_csrf',admincsrf)]).encode()
+        html=req('/admin/api-keys',form,client=adminclient)[2];key=re.search(r'value="(sk_[a-f0-9]+)"',html)[1]
+        check(req('/api/v1/courses',headers={'Authorization':'Bearer '+key},client=fresh)[0]==200,'Scoped API course read works')
+        check(req('/api/v1/users',headers={'Authorization':'Bearer '+key},client=fresh)[0]==403,'Scoped API denies learner data')
+        check(req('/api/v1/users',json.dumps({'email':'api-admin@example.org','role':'admin'}).encode(),{'Authorization':'Bearer '+key,'Content-Type':'application/json'},client=fresh)[0]==403,'Read-only API cannot create administrators')
+        form=urllib.parse.urlencode({'title':'HTTP assignment','instructions':'Apply learning','max_points':'100','pass_percent':'70','resubmit':'1','_csrf':admincsrf}).encode()
+        check(req('/admin/assignments/sample',form,client=adminclient)[0]==200,'Author creates submission assignment')
+        html=req('/assignments/sample')[2];aid=re.findall(r'action="[^"]*/assignments/sample/(\d+)"',html)[-1]
+        boundary='sapiqo-http-fixture'
+        parts=[]
+        for name,value in [('_csrf',csrf),('revision','0'),('action','submit'),('body','HTTP response')]:parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n')
+        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="evidence.txt"\r\nContent-Type: text/plain\r\n\r\nProtected evidence\r\n--{boundary}--\r\n')
+        html=req('/assignments/sample/'+aid,''.join(parts).encode(),{'Content-Type':'multipart/form-data; boundary='+boundary})[2]
+        check('Assignment submitted.' in html,'Authenticated file/text submission works')
+        download=re.search(r'href="([^"]*/assignment-file/\d+)"',html)[1]
+        check(req(download)[2]=='Protected evidence','Owner downloads private attachment')
+        check(req(download,client=newclient)[0]==404,'Other learner cannot download attachment')
+        html=req('/admin/assignment/'+aid,client=adminclient)[2]
+        check('HTTP response' in html and 'Protected evidence' not in html,'Instructor sees response and attachment link')
+        check(req('/profile/security')[0]==200,'Account security page renders')
+        secondcookies=http.cookiejar.CookieJar();secondclient=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(secondcookies))
+        html=req('/login',client=secondclient)[2]
+        req('/login',urllib.parse.urlencode({'email':'learner@example.org','password':'Test-password-123','_csrf':token(html)}).encode(),client=secondclient)
+        check(json.loads(req('/api/whoami',client=secondclient)[2])['authenticated'],'Second session signs in')
+        form=urllib.parse.urlencode({'action':'revoke','current_password':'Test-password-123','_csrf':csrf}).encode()
+        req('/profile/security',form)
+        check(not json.loads(req('/api/whoami',client=secondclient)[2])['authenticated'],'Global revocation invalidates another browser')
         print(f'{checks} HTTP regression checks passed',flush=True)
     finally:
         server.terminate();server.wait(timeout=10);log.flush();log.seek(0)

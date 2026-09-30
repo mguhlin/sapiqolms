@@ -47,10 +47,14 @@ function session_idle_timeout_check(): void {
 function current_user(): ?array {
     session_idle_timeout_check();
     if (empty($_SESSION['uid'])) return null;
-    static $cache = null;
-    if ($cache && $cache['id'] === $_SESSION['uid']) return $cache;
-    $cache = db_one('SELECT * FROM users WHERE id = ?', [$_SESSION['uid']]);
-    return $cache;
+    $user = db_one('SELECT * FROM users WHERE id = ?', [(int)$_SESSION['uid']]);
+    $valid = $user && (int)($user['session_version'] ?? 0) === (int)($_SESSION['session_version'] ?? 0);
+    if (!empty($_SESSION['impersonator'])) {
+        $actor = db_one('SELECT role,session_version FROM users WHERE id=?', [(int)$_SESSION['impersonator']]);
+        $valid = $valid && $actor && $actor['role'] === 'admin' && (int)($actor['session_version'] ?? 0) === (int)($_SESSION['impersonator_version'] ?? 0);
+    }
+    if (!$valid) { unset($_SESSION['uid'], $_SESSION['impersonator'], $_SESSION['csrf']); return null; }
+    return $user;
 }
 
 function is_logged_in(): bool { return current_user() !== null; }
@@ -159,11 +163,20 @@ function manager_allows_user(int $targetId, string $perm): bool {
     return $u !== null && manager_perm_over_user((int) $u['id'], $targetId, $perm);
 }
 
-function login_user(array $user): void {
+function login_user(array $user, bool $mfaVerified = false): void {
+    if (!empty($user['mfa_secret']) && !$mfaVerified) {
+        session_regenerate_id(true);
+        unset($_SESSION['uid'], $_SESSION['csrf']);
+        $_SESSION['mfa_pending'] = ['uid' => (int)$user['id'], 'version' => (int)($user['session_version'] ?? 0), 'expires' => time()+300];
+        redirect('/mfa/challenge');
+    }
     session_regenerate_id(true);
     unset($_SESSION['impersonator'], $_SESSION['csrf']);
     $_SESSION['last_activity'] = time();
+    $_SESSION['reauth_at'] = time();
     $_SESSION['uid'] = (int) $user['id'];
+    $_SESSION['session_version'] = (int)($user['session_version'] ?? 0);
+    unset($_SESSION['mfa_pending']);
 }
 
 // --- Impersonation ("view as user") ------------------------------------------
@@ -184,6 +197,8 @@ function impersonator_user(): ?array {
 function begin_impersonation(int $targetId): void {
     session_regenerate_id(true);                 // new id on privilege change; keeps $_SESSION
     $_SESSION['impersonator'] = (int) $_SESSION['uid'];
+    $_SESSION['impersonator_version'] = (int)($_SESSION['session_version'] ?? 0);
+    $_SESSION['session_version'] = (int)(db_one('SELECT session_version FROM users WHERE id=?', [$targetId])['session_version'] ?? 0);
     $_SESSION['uid'] = $targetId;
 }
 
@@ -192,7 +207,8 @@ function end_impersonation(): ?int {
     if (empty($_SESSION['impersonator'])) return null;
     $adminId = (int) $_SESSION['impersonator'];
     session_regenerate_id(true);
-    unset($_SESSION['impersonator']);
+    $_SESSION['session_version'] = (int)($_SESSION['impersonator_version'] ?? 0);
+    unset($_SESSION['impersonator'], $_SESSION['impersonator_version']);
     $_SESSION['uid'] = $adminId;
     return $adminId;
 }
@@ -286,7 +302,7 @@ function consume_reset_token(string $token): void {
 }
 
 function set_user_password(int $userId, string $password): void {
-    db_run('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?',
+    db_run('UPDATE users SET password_hash = ?, updated_at = ?, session_version=COALESCE(session_version,0)+1 WHERE id = ?',
         [password_hash($password, PASSWORD_DEFAULT), now_utc(), $userId]);
 }
 
@@ -372,11 +388,13 @@ function sso_redirect_uri(string $provider): string {
     return base_url_absolute() . '/auth/' . $provider . '/callback';
 }
 
-function sso_begin(string $provider): never {
+function sso_begin(string $provider, bool $linking = false): never {
+    if (!$linking) unset($_SESSION['sso_link']);
     $p = sso_providers()[$provider] ?? null;
     if (!$p) redirect('/login');
     $_SESSION['sso_state'] = bin2hex(random_bytes(16));
     $_SESSION['sso_provider'] = $provider;
+    $_SESSION['sso_started'] = time();
     $params = http_build_query([
         'client_id'     => $p['client_id'],
         'redirect_uri'  => sso_redirect_uri($provider),
@@ -433,8 +451,8 @@ function sso_complete(string $provider, string $code, string $state): array {
     $p = sso_providers()[$provider] ?? null;
     if (!$p) return [null, ''];
     if (empty($_SESSION['sso_state']) || ($_SESSION['sso_provider'] ?? '') !== $provider
-        || !hash_equals($_SESSION['sso_state'], $state)) return [null, ''];
-    unset($_SESSION['sso_state'], $_SESSION['sso_provider']);
+        || (int)($_SESSION['sso_started'] ?? 0) < time()-300 || !hash_equals($_SESSION['sso_state'], $state)) return [null, ''];
+    unset($_SESSION['sso_state'], $_SESSION['sso_provider'], $_SESSION['sso_started']);
 
     // Resolve a normalized identity: ['email','first','last','sub','picture'].
     $id = ($p['flow'] ?? '') === 'clever'
@@ -444,6 +462,19 @@ function sso_complete(string $provider, string $code, string $state): array {
     $email = strtolower(trim((string) $id['email']));
     if (!valid_email($email) || empty($id['sub'])) return [null, 'Invalid provider identity.'];
 
+    $link = $_SESSION['sso_link'] ?? null; unset($_SESSION['sso_link']);
+    if ($link) {
+        $actor = current_user();
+        if (!$actor || (int)$actor['id'] !== (int)$link['uid'] || $link['expires'] < time() || is_impersonating()) return [null, 'Account linking expired.'];
+        if (!identity_link((int)$actor['id'], $provider, (string)$id['sub'])) return [null, 'That provider identity is already linked.'];
+        $_SESSION['sso_linked'] = $provider;
+        audit('identity.linked', ['detail' => $provider]);
+        return [$actor, ''];
+    }
+    $linked = db_one('SELECT u.* FROM users u JOIN user_identities i ON i.user_id=u.id WHERE i.provider=? AND i.subject=?', [$provider, (string)$id['sub']]);
+    if ($linked) return [$linked, ''];
+    $original = db_one('SELECT * FROM users WHERE auth_provider=? AND provider_sub=?', [$provider,(string)$id['sub']]);
+    if ($original) return [$original, ''];
     $user = db_one('SELECT * FROM users WHERE email = ?', [$email]);
     if ($user && (($user['auth_provider'] ?? '') !== $provider
         || (string) ($user['provider_sub'] ?? '') !== (string) $id['sub'])) {

@@ -79,6 +79,7 @@
         const pr = await fetch(this.base + "progress?course=" + encodeURIComponent(slug), { credentials: "same-origin" });
         if (pr.ok) {
           const data = await pr.json();
+          Progress._cache = {}; // the authenticated server is authoritative, including revoked progress
           (data.steps || []).forEach((sid) => {
             if (!Progress.data[sid]) Progress.data[sid] = { completed_at: null };
           });
@@ -266,6 +267,7 @@
   function renderSidebar(activeId) {
     els.nav.innerHTML = "";
     COURSE.modules.forEach((m) => {
+      if (!m.lessons || !m.lessons.length) return;
       const unitIds = moduleUnitIds(m);
       const done = countDone(unitIds);
       const complete = done === unitIds.length;
@@ -649,6 +651,7 @@
 
     const cards = el("div", { class: "module-cards" });
     COURSE.modules.forEach((m) => {
+      if (!m.lessons || !m.lessons.length) return;
       const unitIds = moduleUnitIds(m);
       const done = countDone(unitIds);
       const mLocked = lessonLockedById(m.lessons[0].id);
@@ -676,7 +679,7 @@
           stat(s.videos, "Videos"),
           stat(s.topics, "Bonus resources"),
         ]),
-        el("button", { class: "btn btn-gold", onclick: () => selectLesson(firstLesson.id, true) }, [
+        el("button", { class: "btn btn-gold", disabled: firstLesson ? null : true, onclick: () => firstLesson && selectLesson(firstLesson.id, true) }, [
           resumeLabel(),
         ]),
       ]),
@@ -692,6 +695,13 @@
         : null,
     ]);
 
+    if (LMS.enabled && COURSE.settings && COURSE.settings.assignment_count) {
+      view.insertBefore(el("section", {class:"course-home__overview"}, [
+        el("h2", {}, ["Assignments and completion"]),
+        el("p", {}, [(COURSE.settings.required_assignments || 0) + " required assignment(s) need a passing instructor grade for course completion and a new certificate."]),
+        el("a", {class:"btn btn-gold",href:new URL("../assignments/"+encodeURIComponent(COURSE.slug), LMS.base).href}, ["Open assignments and feedback"])
+      ]), view.firstChild.nextSibling);
+    }
     els.reader.innerHTML = "";
     els.reader.appendChild(view);
     window.scrollTo(0, 0);

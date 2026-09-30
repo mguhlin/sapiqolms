@@ -11,6 +11,7 @@ $scaleStr = implode('  ·  ', array_map(fn($b) => $b['letter'] . ' ≥ ' . rtrim
   <a class="btn btn-outline btn-sm" href="<?= e(url('/admin/gradebook/' . urlencode($slug) . '?export=1')) ?>">Export CSV</a>
 </div>
 
+<p><a class="btn btn-outline" href="<?= e(url('/admin/assignments/'.$slug)) ?>">Assignments, rubrics and cohorts</a></p>
 <div class="card">
   <h2 style="margin-top:0">Add / edit an assessment</h2>
   <form method="post" action="<?= e(url('/admin/gradebook/' . urlencode($slug) . '/assessment')) ?>" class="gb-addform">

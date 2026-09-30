@@ -551,11 +551,16 @@ function create_course_from_markdown(string $text): array {
 }
 
 function cr_write_shell(string $outDir, string $title, string $desc): void {
+    file_put_contents($outDir . '/index.html', cr_shell_html($title, $desc));
+}
+
+function cr_shell_html(string $title, string $desc, bool $runtime = false): string {
     $t = htmlspecialchars($title, ENT_QUOTES); $d = htmlspecialchars($desc, ENT_QUOTES);
+    $home = $runtime ? htmlspecialchars(url('/dashboard'), ENT_QUOTES) : '../index.html';
     $cfg = lms_config();
     $brand = htmlspecialchars($cfg['catalog_name'] ?? ($cfg['app_name'] . ' Courses'), ENT_QUOTES);
     $mark = htmlspecialchars(mb_substr($cfg['brand_mark'] ?? mb_substr($cfg['app_name'], 0, 1), 0, 2), ENT_QUOTES);
-    file_put_contents($outDir . '/index.html', <<<HTML
+    return <<<HTML
 <!DOCTYPE html>
 <html lang="en"><head>
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -564,11 +569,11 @@ function cr_write_shell(string $outDir, string $title, string $desc): void {
   <link rel="stylesheet" href="../assets/css/theme.css" /><link rel="stylesheet" href="../assets/css/reader.css" />
 </head><body>
   <a class="skip-link" href="#reader">Skip to lesson content</a>
-  <header class="topbar"><a class="brand" href="../index.html"><span class="brand__mark">$mark</span><span>$brand</span></a>
+  <header class="topbar"><a class="brand" href="$home"><span class="brand__mark">$mark</span><span>$brand</span></a>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle course navigation">Contents</button></header>
   <div class="app" id="app" data-nav-open="false">
     <aside class="sidebar" aria-label="Course navigation"><div class="sidebar__head">
-      <a class="brand" href="../index.html"><span class="brand__mark">$mark</span><span>$brand</span></a>
+      <a class="brand" href="$home"><span class="brand__mark">$mark</span><span>$brand</span></a>
       <h1 class="sidebar__course-title" id="courseTitle">Loading…</h1>
       <div class="sidebar__progress-meta"><span id="sideProgressCount">0 / 0</span><strong id="sideProgressPct">0%</strong></div>
       <div class="progress progress--on-navy"><div class="progress__bar" id="sideProgressBar"></div></div></div>
@@ -577,5 +582,5 @@ function cr_write_shell(string $outDir, string $title, string $desc): void {
   </div>
   <script src="../assets/js/reader.js"></script>
 </body></html>
-HTML);
+HTML;
 }

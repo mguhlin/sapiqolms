@@ -12,6 +12,7 @@ $start = $start ?? $sample; ?>
   <?php endif; ?>
 </div>
 
+<?php if (!$editing): ?><div class="card"><h2>Start with a course template</h2><p>Choose a starting structure before editing. Replace the sample prompts with your own materials.</p><?php foreach (learning_templates() as $key=>$template): ?><a class="btn btn-outline" href="<?= e(url('/admin/create?template='.$key)) ?>"><?= e($template['title']) ?></a> <?php endforeach; ?></div><?php endif; ?>
 <div class="editor-toolbar card" style="padding:12px 16px">
   <div class="toolbar" style="align-items:center;gap:10px">
     <button type="button" class="btn btn-gold" id="publishBtn"><?= $editing ? 'Save &amp; republish' : 'Publish course' ?></button>

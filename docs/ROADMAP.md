@@ -62,8 +62,9 @@ will be recorded below as work lands.
 - Real SSO account-linking/login/logout and LTI launch/grade-passback tests.
 - Supported SCORM/Common Cartridge examples and documented archive limits.
 - SMTP, parallel quiz attempts/reset tokens, upgrades and recovery tests.
-- Independently resettable hosted demo on a PHP server; GitHub Pages continues
-  to host the introduction and roadmap, not learner accounts.
+- Local SQLite demonstration and self-hosted SQLite/MariaDB installations.
+  GitHub Pages hosts the introduction, roadmap and release downloads. A public
+  hosted demo is optional future work, outside the current publication scope.
 - Two or three organizational pilots and manual keyboard/screen-reader review.
 - Consider LTI certification only after live interoperability is established.
 
@@ -82,8 +83,23 @@ will be recorded below as work lands.
 | Item | Status | Evidence |
 | --- | --- | --- |
 | Roadmap saved and introduced on website | Implemented | This document; project website roadmap section |
-| P0–P3 application work | Planned | Work will be recorded here as verified increments land |
+| Complete backup/recovery and relocation | Implemented and tested | `tests/run.py`, `tests/recovery.py`, `tests/mysql.py` |
+| MFA, revocation, scoped keys and verified SSO linking | Implemented; real SSO callback validation pending | Security/HTTP/browser tests; account services |
+| Trusted shells and active-content isolation | Opaque-origin sandbox and basic SCORM bridge implemented/tested | Browser parent-access test; separate-origin/full SCORM interoperability remains follow-up |
+| Supported environment checks | Local SQLite/MariaDB passed; expanded CI required for release | PHP matrix, browser and Docker/Apache workflow |
+| Readiness, templates, publication checklist, next activity | Implemented and browser-tested | Learning services and browser journeys |
+| Assignments, rubrics, feedback, completion gates | Implemented and tested | Security/HTTP/browser/MariaDB checks |
+| Instructor grants and protected attachments | Implemented and boundary-tested | Explicit course access; HTTP private-file checks |
+| Cohort schedules, late rules, reminders and reports | Implemented; real scheduled delivery validation pending | UTC/deadline regressions; CLI reminder job |
+| Focused service extraction | Implemented incrementally | Account, learning and assignment service/route files |
+| Parallel requests and update/recovery checks | Passed on tested drivers | Eight-worker contention; real 1.12.1 code upgrade/rollback |
+| Compatibility matrix and pilot protocols | Published | `COMPATIBILITY.md`, `PILOT_PROTOCOL.md` |
+| Self-hosted distribution and local demo | Installer and SQLite/MariaDB checks delivered | Users provide their own machine/server; Pages publishes the website and downloads |
 | Live provider tests, independent accessibility review, organization pilots | External validation required | Credentials, reachable server and participating users are needed; do not claim completion from local tests |
 
 See [the publication audit](CODE_AUDIT.md) for the starting point and
 [security policy](../SECURITY.md) for reporting vulnerabilities.
+
+Release evidence: [1.13 verification](RELEASE_1.13.md). Remaining external
+acceptance criteria are deliberately open; this release does not declare the
+entire roadmap complete or claim independent certification.

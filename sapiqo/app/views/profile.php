@@ -51,9 +51,12 @@
       <div class="field"><label for="organization">Organization / District</label>
         <input id="organization" name="organization" value="<?= e($user['organization']) ?>"></div>
     </div>
+    <div class="field"><label for="current_password">Current password (required when changing password)</label><input id="current_password" name="current_password" type="password" autocomplete="current-password"></div>
     <div class="field"><label for="password">New password (optional)</label>
       <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Leave blank to keep current">
       <small>At least 8 characters.</small></div>
     <button class="btn btn-gold" type="submit">Save changes</button>
   </form>
 </div>
+
+<div class="card"><h2>Account security</h2><p>Manage two-step verification, linked sign-in providers, and active sessions.</p><a class="btn btn-outline" href="<?= e(url('/profile/security')) ?>">Account security</a></div>

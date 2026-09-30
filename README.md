@@ -10,7 +10,7 @@ and issue badges and CPE certificates.
 [User manual](sapiqo/docs/manual/README.md) · [Code audit](docs/CODE_AUDIT.md) ·
 [Planned roadmap](docs/ROADMAP.md)**
 
-Version **1.12.1**. Original project material: **© 2026 Miguel Guhlin · CC BY-SA 4.0**.
+Version **1.13.0**. Original project material: **© 2026 Miguel Guhlin · CC BY-SA 4.0**.
 
 GitHub Pages hosts the project introduction. To run the LMS, install it on a PHP
 server or use Docker; Pages cannot execute PHP or store learner accounts.
@@ -24,7 +24,8 @@ server or use Docker; Pages cannot execute PHP or store learner accounts.
   Common Cartridge, SCORM, packages, and OneRoster; export to Canvas/Blackboard/
   Sakai/Moodle with per-platform guidance.
 - **Assessments** — quizzes (multiple types, banks, attempts) + a custom
-  gradebook scores grid with letter grades and CSV export.
+  gradebook scores grid with letter grades and CSV export; text/file assignments,
+  drafts, resubmissions, reusable rubrics, and instructor feedback.
 - **Discussion forums** — named, threaded forums added to modules like pages,
   each with a rich prompt; nested replies, reactions, moderation; plus a global
   announcements board.
@@ -39,6 +40,10 @@ server or use Docker; Pages cannot execute PHP or store learner accounts.
   one-click badge/certificate/transcript access.
 - **Integrations** — SSO (Google, Microsoft, Clever, ClassLink), LTI 1.3, a REST
   API, SCORM, and OneRoster.
+- **Account security** — authenticator MFA, single-use recovery codes, session
+  revocation, explicit SSO linking, and scoped API keys.
+- **Teaching workflows** — course instructor grants, cohort schedules, late
+  policies, completion requirements, and learners-needing-attention reports.
 - **Operations** — white-label branding + themes + i18n, full mobile
   responsiveness, an organized Admin menu, and a WordPress-style in-browser
   software updater with backup/rollback.
@@ -48,7 +53,9 @@ server or use Docker; Pages cannot execute PHP or store learner accounts.
 The publication includes a source audit and regression tests for authentication,
 course access, progress, quizzes, archives, and backups. Read the
 [audit findings and limitations](docs/CODE_AUDIT.md) and [security policy](SECURITY.md).
-Use HTTPS, your own administrator credentials, and a canonical `public_url`.
+Use HTTPS, your own administrator credentials, MFA, and a canonical `public_url`.
+See [1.13 verification](docs/RELEASE_1.13.md), [operations](docs/OPERATIONS.md),
+and the [compatibility matrix](docs/COMPATIBILITY.md) before enabling integrations.
 
 ## Layout
 

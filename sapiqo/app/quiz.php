@@ -146,7 +146,7 @@ function quiz_record_limited(int $userId, int $courseId, string $quizId, array $
     $pdo = db(); $pdo->beginTransaction();
     try {
         $sql = lms_config()['db_driver'] === 'mysql'
-            ? 'INSERT IGNORE INTO quiz_results (user_id,course_id,quiz_id,score,total,passed,attempts,updated_at) VALUES (?,?,?,0,0,0,0,?)'
+            ? 'INSERT INTO quiz_results (user_id,course_id,quiz_id,score,total,passed,attempts,updated_at) VALUES (?,?,?,0,0,0,0,?) ON DUPLICATE KEY UPDATE id=id'
             : 'INSERT OR IGNORE INTO quiz_results (user_id,course_id,quiz_id,score,total,passed,attempts,updated_at) VALUES (?,?,?,0,0,0,0,?)';
         db_run($sql, [$userId, $courseId, $quizId, now_utc()]);
         $suffix = lms_config()['db_driver'] === 'mysql' ? ' FOR UPDATE' : '';

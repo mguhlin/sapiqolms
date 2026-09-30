@@ -4,6 +4,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/assignments.php';
 require_once __DIR__ . '/badge.php';
 
 function all_courses(bool $activeOnly = true): array {
@@ -236,6 +237,8 @@ function is_enrolled(int $userId, int $courseId): bool {
 function course_access_error(int $userId, array $course, bool $authorPreview = false): ?string {
     if ($authorPreview && function_exists('can_edit_content') && can_edit_content()) return null;
     if (!(int) $course['active'] || ($course['status'] ?? 'published') === 'draft') return 'Course is unavailable.';
+    $schedule = cohort_schedule((int)$course['id'], $userId);
+    if ($schedule['opens_at'] && $schedule['opens_at'] > now_utc()) return 'This cohort opens at ' . $schedule['opens_at'] . ' UTC.';
     if (unmet_prerequisite($userId, $course)) return 'Complete the prerequisite course first.';
     $enrollment = db_one('SELECT * FROM enrollments WHERE user_id=? AND course_id=?', [$userId, $course['id']]);
     if ($enrollment && $enrollment['status'] !== 'completed' && !empty($enrollment['expires_at'])
@@ -376,7 +379,8 @@ function course_percent(int $userId, array $course): int {
     $total = (int) $course['total_units'];
     if ($total <= 0) return 0;
     $done = completed_units($userId, (int) $course['id']);
-    return (int) min(100, round($done / $total * 100));
+    [$required,$passed] = assignment_required_state($userId,(int)$course['id']);
+    return (int) min(100, floor(($done+$passed) / ($total+$required) * 100));
 }
 
 // Record a step completion (idempotent). Auto-enrolls, then checks for course
@@ -428,6 +432,7 @@ function set_last_seen(int $userId, int $courseId, string $stepId): void {
 }
 
 function mark_enrollment_complete(int $userId, int $courseId): void {
+    $course = course_by_id($courseId); if (!$course || course_percent($userId,$course)<100) return;
     db_run("UPDATE enrollments SET status = 'completed', completed_at = COALESCE(completed_at, ?)
             WHERE user_id = ? AND course_id = ?", [now_utc(), $userId, $courseId]);
 }
@@ -439,7 +444,7 @@ function issue_badge(int $userId, int $courseId): ?array {
 
     $user = db_one('SELECT * FROM users WHERE id = ?', [$userId]);
     $course = course_by_id($courseId);
-    if (!$user || !$course) return null;
+    if (!$user || !$course || course_percent($userId,$course)<100) return null;
 
     $code = strtoupper(substr(bin2hex(random_bytes(8)), 0, 12));
     $issuedAt = now_utc();

@@ -195,6 +195,7 @@ route('GET', '/auth/{provider}/callback', function ($p) {
         flash($err !== '' ? $err : 'Single sign-on failed or was cancelled.', 'error');
         redirect('/login');
     }
+    if (!empty($_SESSION['sso_linked'])) { unset($_SESSION['sso_linked']); flash('Additional sign-in method linked.'); redirect('/profile/security'); }
     login_user($user);
     if ($r = code_apply_pending((int) $user['id'])) {
         flash('Welcome! Your code enrolled you in: ' . implode(', ', $r['courses']) . '.');
@@ -303,7 +304,8 @@ route('POST', '/profile', function () {
             flash('Password not changed: use at least 8 characters.', 'error');
             redirect('/profile');
         }
-        db_run('UPDATE users SET password_hash=? WHERE id=?', [password_hash($new, PASSWORD_DEFAULT), $u['id']]);
+        if (!password_verify((string) ($_POST['current_password'] ?? ''), (string) $u['password_hash'])) { flash('Enter your current password to change it.', 'error'); redirect('/profile'); }
+        set_user_password((int) $u['id'], $new);
     }
     flash('Your profile has been updated.');
     redirect('/profile');
@@ -599,7 +601,7 @@ route('GET', '/lti/config', function () {
 // --- Public REST API v1 (Bearer-token auth) ---------------------------------
 
 route('GET', '/api/v1/courses', function () {
-    require_api_key();
+    require_api_key('courses:read');
     $out = array_map(fn($c) => [
         'id' => (int) $c['id'], 'slug' => $c['slug'], 'title' => $c['title'],
         'total_units' => (int) $c['total_units'], 'active' => (int) $c['active'] === 1,
@@ -608,7 +610,7 @@ route('GET', '/api/v1/courses', function () {
 });
 
 route('GET', '/api/v1/users', function () {
-    require_api_key();
+    require_api_key('users:read');
     $perPage = max(1, min(200, (int) input('per_page', '50')));
     $page = max(1, (int) input('page', '1'));
     $total = (int) (db_one('SELECT COUNT(*) n FROM users')['n'] ?? 0);
@@ -618,8 +620,9 @@ route('GET', '/api/v1/users', function () {
 });
 
 route('POST', '/api/v1/users', function () {
-    $key = require_api_key();
+    $key = require_api_key('users:write');
     $b = api_body();
+    if (($b['role'] ?? '') === 'admin' && !api_key_allows($key, 'users:admin')) json_out(['error' => 'Creating administrators requires users:admin scope'], 403);
     [$ok, $res] = register_local([
         'first_name' => $b['first_name'] ?? '', 'last_name' => $b['last_name'] ?? '',
         'email' => $b['email'] ?? '', 'user_type' => $b['user_type'] ?? '',
@@ -633,7 +636,7 @@ route('POST', '/api/v1/users', function () {
 });
 
 route('GET', '/api/v1/users/{id}', function ($p) {
-    require_api_key();
+    require_api_key('users:read');
     $u = db_one('SELECT id,first_name,last_name,email,role,user_type,campus,organization,created_at FROM users WHERE id=?', [(int) $p['id']]);
     if (!$u) json_out(['error' => 'Not found'], 404);
     $u['enrollments'] = enrollments_for((int) $u['id']);
@@ -642,7 +645,7 @@ route('GET', '/api/v1/users/{id}', function ($p) {
 });
 
 route('GET', '/api/v1/enrollments', function () {
-    require_api_key();
+    require_api_key('enrollments:read');
     if (input('user') !== '') {
         json_out(['data' => enrollments_for((int) input('user'))]);
     }
@@ -654,7 +657,7 @@ route('GET', '/api/v1/enrollments', function () {
 });
 
 route('POST', '/api/v1/enrollments', function () {
-    $key = require_api_key();
+    $key = require_api_key('enrollments:write');
     $b = api_body();
     $u = isset($b['user_id']) ? db_one('SELECT * FROM users WHERE id=?', [(int) $b['user_id']])
         : db_one('SELECT * FROM users WHERE email=?', [strtolower((string) ($b['email'] ?? ''))]);
@@ -667,7 +670,7 @@ route('POST', '/api/v1/enrollments', function () {
 });
 
 route('GET', '/api/v1/completions', function () {
-    require_api_key();
+    require_api_key('completions:read');
     $rows = db_all(
         "SELECT u.email, u.first_name, u.last_name, c.slug AS course, e.status, e.completed_at,
                 b.code AS badge_code
@@ -679,7 +682,7 @@ route('GET', '/api/v1/completions', function () {
 });
 
 route('GET', '/api/v1/badges', function () {
-    require_api_key();
+    require_api_key('badges:read');
     if (input('user') !== '') json_out(['data' => badges_for((int) input('user'))]);
     $rows = db_all('SELECT b.*, u.email, c.slug AS course FROM badges b JOIN users u ON u.id=b.user_id JOIN courses c ON c.id=b.course_id ORDER BY b.id DESC LIMIT 1000');
     json_out(['data' => $rows]);
@@ -1136,7 +1139,7 @@ route('GET', '/admin/create', function () {
     require_content_access();
     $slug = input('slug'); $clone = input('clone'); $draftId = (int) input('draft');
     $me = current_user();
-    $editing = null; $start = creator_sample();
+    $editing = null; $start = learning_template_source(input('template'));
     if ($draftId > 0) {
         $d = draft_get((int) $me['id'], $draftId);
         if ($d) $start = $d['markdown'];
@@ -1496,6 +1499,7 @@ route('POST', '/admin/courses/{slug}/status', function ($p) {
     $c = course_by_slug($p['slug']);
     if (!$c) { flash('Course not found.', 'error'); redirect('/admin/courses'); }
     $new = (($c['status'] ?? 'published') === 'draft') ? 'published' : 'draft';
+    if ($new === 'published') { $checks = course_publication_checks(course_load_json($c['slug'])); if ($checks['errors']) { flash(implode(' ', $checks['errors']), 'error'); redirect('/admin/courses/' . $c['slug'] . '/checklist'); } }
     db_run('UPDATE courses SET status = ? WHERE id = ?', [$new, $c['id']]);
     // Persist to course.json so it survives a rescan and travels with the course.
     $jsonPath = rtrim(lms_config()['courses_dir'], '/') . '/' . $c['slug'] . '/course.json';
@@ -2011,7 +2015,9 @@ route('GET', '/admin/api-keys', function () {
 route('POST', '/admin/api-keys', function () {
     csrf_check();
     require_admin();
-    [$id, $token] = api_key_create(input('name'), (int) current_user()['id']);
+    $scopes = array_values(array_intersect(array_filter((array)($_POST['scopes'] ?? []), 'is_string'), api_key_scopes()));
+    if (!$scopes) { flash('Select at least one API scope.', 'error'); redirect('/admin/api-keys'); }
+    [$id, $token] = api_key_create(input('name'), (int) current_user()['id'], $scopes);
     $_SESSION['new_api_key'] = $token;
     audit('api_key.create', ['target_type' => 'api_key', 'target_id' => (string) $id, 'detail' => input('name')]);
     flash('API key created — copy it now; it won\'t be shown again.');
@@ -2978,7 +2984,7 @@ route('POST', '/manage/users/{id}', function ($p) {
         ]);
         $pw = (string) ($_POST['password'] ?? '');
         if ($pw !== '' && strlen($pw) >= 8) {
-            db_run('UPDATE users SET password_hash=? WHERE id=?', [password_hash($pw, PASSWORD_DEFAULT), $id]);
+            set_user_password($id, $pw);
         }
     }
     // Enrollments (requires the "enroll" permission).
@@ -3052,7 +3058,7 @@ route('POST', '/admin/users/{id}', function ($p) {
             flash('Password not changed: use at least 8 characters.', 'error');
             redirect('/admin/users/' . $id);
         }
-        db_run('UPDATE users SET password_hash=? WHERE id=?', [password_hash($pw, PASSWORD_DEFAULT), $id]);
+        set_user_password($id, $pw);
     }
 
     // Sync enrollments to the checked set.

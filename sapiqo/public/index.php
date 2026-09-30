@@ -14,6 +14,7 @@ require_once $APP . '/notifications.php';
 require_once $APP . '/security.php';
 require_once $APP . '/mailer.php';
 require_once $APP . '/auth.php';
+require_once $APP . '/account_security.php';
 require_once $APP . '/avatar.php';
 require_once $APP . '/courses.php';
 require_once $APP . '/codes.php';
@@ -34,9 +35,11 @@ require_once $APP . '/cc_import.php';
 require_once $APP . '/scorm.php';
 require_once $APP . '/learndash_import.php';
 require_once $APP . '/creator.php';
+require_once $APP . '/learning.php';
 require_once $APP . '/forum.php';
 require_once $APP . '/editor.php';
 require_once $APP . '/gradebook.php';
+require_once $APP . '/assignments.php';
 require_once $APP . '/help.php';
 
 // Production error posture: log, don't display, unless config 'debug' is on.
@@ -108,5 +111,8 @@ function dispatch(string $method, string $path): void {
 }
 
 require $APP . '/routes.php';
+require $APP . '/account_routes.php';
+require $APP . '/learning_routes.php';
+require $APP . '/assignment_routes.php';
 
 dispatch($method, $path);

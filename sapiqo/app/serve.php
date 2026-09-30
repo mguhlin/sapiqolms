@@ -10,6 +10,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/quiz.php';
 require_once __DIR__ . '/editor.php';
+require_once __DIR__ . '/creator.php';
+require_once __DIR__ . '/scorm.php';
 
 const SERVE_DENY_TOP = ['sapiqo', 'sapiqo-data'];
 
@@ -89,6 +91,17 @@ function serve_course(string $rel): void {
         }
     }
 
+    // Never execute a package-supplied root shell in the privileged LMS origin.
+    if ($top !== 'assets' && $isShell) {
+        $data = course_load_json($course['slug']);
+        header('Content-Type: text/html; charset=utf-8'); header('Cache-Control: private, no-store');
+        if (($data['type'] ?? '') === 'scorm') {
+            if (!$authed) { http_response_code(403); exit('Sign in to launch this package.'); }
+            echo scorm_player_html($data);
+        } else { echo cr_shell_html($data['title'] ?? $course['title'], $data['tagline'] ?? '', true); }
+        exit;
+    }
+
     $ext = strtolower(pathinfo($full, PATHINFO_EXTENSION));
     $type = SERVE_TYPES[$ext] ?? 'application/octet-stream';
     $size = filesize($full);
@@ -110,8 +123,18 @@ function serve_course(string $rel): void {
     // execute — they still render. The reader shell (course-root index.html) is
     // NOT sandboxed, so only media HTML is covered by the $isMedia guard.
     $sandbox = in_array($ext, ['svg', 'svgz'], true)
-        || ($isMedia && in_array($ext, ['html', 'htm', 'xhtml', 'xml'], true));
+        || ($top !== 'assets' && in_array($ext, ['html', 'htm', 'xhtml', 'xml'], true));
     if ($sandbox) {
+        if (in_array('scorm', $seg, true) && in_array($ext, ['html','htm'], true)) {
+            // Opaque origin: scripts can run, but cannot read LMS DOM/storage/API.
+            // Every entry point remains sandboxed even when opened directly.
+            header("Content-Security-Policy: sandbox allow-scripts; default-src https: http: data: blob:; script-src https: http: 'unsafe-inline' 'unsafe-eval'; style-src https: http: 'unsafe-inline'; connect-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'");
+            $html = (string)file_get_contents($full);
+            $bridge = '<script src="' . e(url('/assets/js/scorm-content.js')) . '"></script>';
+            // Run the API shim before package scripts, without allowing package head/base directives to replace it.
+            echo $bridge . $html;
+            exit;
+        }
         header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; sandbox");
     }
 
@@ -170,6 +193,8 @@ function course_settings_overlay(array $data, string $slug): array {
     if (!$row) return $data;
     $settings = is_array($data['settings'] ?? null) ? $data['settings'] : [];
     $settings['sequential'] = course_is_sequential($row);
+    $settings['assignment_count'] = count(assignment_list((int)$row['id']));
+    $settings['required_assignments'] = count(array_filter(assignment_list((int)$row['id']), fn($a)=>!empty($a['required_completion'])));
     $data['settings'] = $settings;
     return $data;
 }

@@ -29,6 +29,7 @@ function db(): PDO {
         }
         $pdo = new PDO('sqlite:' . $path, null, null, $opts);
         $pdo->exec('PRAGMA foreign_keys = ON');
+        $pdo->exec('PRAGMA busy_timeout = 5000');
         $pdo->exec('PRAGMA journal_mode = WAL');
     }
     return $pdo;
@@ -66,7 +67,7 @@ function now_utc(): string {
 
 // Bump when schema.*.sql or db_ensure_columns() change, so existing installs
 // re-run the (idempotent) migration on the next request.
-const DB_SCHEMA_VERSION = 21;
+const DB_SCHEMA_VERSION = 22;
 
 // Runs the schema for the active driver. Idempotent (CREATE TABLE IF NOT EXISTS).
 function db_migrate(): void {
@@ -88,6 +89,13 @@ function db_migrate(): void {
 // Add columns that were introduced after the initial table definitions.
 // SQLite/MySQL both lack a portable "ADD COLUMN IF NOT EXISTS", so we probe.
 function db_ensure_columns(): void {
+    db_add_column_if_missing('users', 'session_version', 'INTEGER DEFAULT 0', 'INT DEFAULT 0');
+    db_add_column_if_missing('users', 'mfa_secret', 'TEXT', 'TEXT');
+    db_add_column_if_missing('users', 'mfa_last_counter', 'INTEGER DEFAULT -1', 'BIGINT DEFAULT -1');
+    db_add_column_if_missing('users', 'mfa_recovery', 'TEXT', 'TEXT');
+    db_add_column_if_missing('api_keys', 'scopes', 'TEXT', 'TEXT');
+    $idType = lms_config()['db_driver'] === 'mysql' ? 'BIGINT' : 'INTEGER';
+    db()->exec("CREATE TABLE IF NOT EXISTS user_identities (provider VARCHAR(32) NOT NULL, subject VARCHAR(191) NOT NULL, user_id $idType NOT NULL, created_at VARCHAR(32) NOT NULL, PRIMARY KEY(provider, subject))");
     db_add_column_if_missing('enrollments', 'last_step_id', 'TEXT', 'VARCHAR(191)');
     db_add_column_if_missing('enrollments', 'last_seen_at', 'TEXT', 'DATETIME');
     db_add_column_if_missing('enrollments', 'expires_at', 'TEXT', 'DATETIME');
@@ -135,6 +143,7 @@ function db_ensure_columns(): void {
     // users past this date, but admins can still see the full history).
     db_add_column_if_missing('forum_posts', 'expires_at', 'TEXT', 'DATETIME');
     db_ensure_gradebook();
+    db_ensure_learning();
     db_ensure_orgs();
     db_ensure_enroll_codes();
     db_ensure_indexes();
@@ -481,4 +490,16 @@ function ensure_schema(): void {
         // yet provisioned); setup.php / installer will handle first-time setup.
         error_log('ensure_schema: ' . $e->getMessage());
     }
+}
+
+function db_ensure_learning(): void {
+    foreach (['submission_enabled'=>['INTEGER DEFAULT 0','TINYINT DEFAULT 0'], 'instructions'=>['TEXT','TEXT'], 'rubric'=>['TEXT','TEXT'],
+        'required_completion'=>['INTEGER DEFAULT 0','TINYINT DEFAULT 0'], 'pass_percent'=>['REAL DEFAULT 70','DECIMAL(5,2) DEFAULT 70'],
+        'late_policy'=>["TEXT DEFAULT 'accept'","VARCHAR(16) DEFAULT 'accept'"], 'available_at'=>['TEXT','VARCHAR(32)'], 'allow_resubmit'=>['INTEGER DEFAULT 1','TINYINT DEFAULT 1']] as $col=>$types) db_add_column_if_missing('assessments',$col,$types[0],$types[1]);
+    $id = lms_config()['db_driver'] === 'mysql' ? 'BIGINT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    db()->exec("CREATE TABLE IF NOT EXISTS course_instructors (course_id BIGINT NOT NULL, user_id BIGINT NOT NULL, PRIMARY KEY(course_id,user_id))");
+    db()->exec("CREATE TABLE IF NOT EXISTS rubrics (id $id, title VARCHAR(191) NOT NULL, criteria TEXT NOT NULL, created_at VARCHAR(32) NOT NULL)");
+    db()->exec("CREATE TABLE IF NOT EXISTS assignment_submissions (id $id, assessment_id BIGINT NOT NULL, user_id BIGINT NOT NULL, body TEXT NOT NULL, file_path VARCHAR(191), file_name VARCHAR(191), status VARCHAR(16) NOT NULL, feedback TEXT, rubric_scores TEXT, submitted_at VARCHAR(32), updated_at VARCHAR(32) NOT NULL, revision INT NOT NULL DEFAULT 1, UNIQUE(assessment_id,user_id))");
+    db()->exec("CREATE TABLE IF NOT EXISTS cohort_schedules (group_id BIGINT NOT NULL, course_id BIGINT NOT NULL, opens_at VARCHAR(32), due_at VARCHAR(32), late_policy VARCHAR(16) NOT NULL, PRIMARY KEY(group_id,course_id))");
+    db()->exec("CREATE TABLE IF NOT EXISTS deadline_reminders (user_id BIGINT NOT NULL, assessment_id BIGINT NOT NULL, due_at VARCHAR(32) NOT NULL, PRIMARY KEY(user_id,assessment_id,due_at))");
 }

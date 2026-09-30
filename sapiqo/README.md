@@ -1,3 +1,5 @@
+> Version 1.13 adds assignments/rubrics, course instructor grants, MFA, scoped API keys and complete recovery. See the [release verification](../docs/RELEASE_1.13.md) and [operations guide](../docs/OPERATIONS.md) for current behavior and compatibility limits.
+
 # Sapiqo LMS
 
 **Learning made clear.** A focused, self‑hostable learning management system. It

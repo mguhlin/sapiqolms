@@ -8,12 +8,17 @@ permissions:
 jobs:
   regression:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.3', '8.4']
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: pdo_sqlite, mbstring, gd, curl, openssl, phar, zip
+          php-version: ${{ matrix.php }}
+          extensions: pdo_sqlite, mbstring, gd, curl, openssl, phar, zip, fileinfo
           coverage: none
       - uses: actions/setup-node@v4
         with:
@@ -22,3 +27,50 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 tests/run.py
+      - run: python3 tests/concurrency.py
+      - run: python3 tests/smtp.py
+      - run: python3 tests/upgrades.py
+      - run: python3 tests/recovery.py
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, mbstring, gd, curl, openssl, phar, fileinfo
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: python3 tests/browser.py
+  mariadb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, pdo_sqlite, mbstring, gd, curl, openssl, phar, fileinfo
+          coverage: none
+      - run: sudo apt-get update && sudo apt-get install -y mariadb-server mariadb-client
+      - run: python3 tests/mysql.py
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f installer/Dockerfile -t sapiqo-check .
+      - run: docker run -d --name sapiqo-check -p 127.0.0.1:8080:80 -e ADMIN_EMAIL=admin@example.org -e ADMIN_PASSWORD=Isolated-test-password-123 sapiqo-check
+      - run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/login -o /tmp/login.html; then break; fi
+            sleep 2
+          done
+          python3 tests/docker-http.py
+      - if: always()
+        run: docker logs sapiqo-check
+      - if: always()
+        run: docker rm -f sapiqo-check

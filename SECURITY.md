@@ -1,7 +1,7 @@
 # Security
 
-The current publication is version **1.12.1**. See
-[the code audit](docs/CODE_AUDIT.md) for changes, test coverage, and remaining
+The current publication is version **1.13.0**. See
+[release verification](docs/RELEASE_1.13.md) and [the initial code audit](docs/CODE_AUDIT.md) for changes, test coverage, and remaining
 limitations. This project has not received an independent penetration test or
 security certification.
 
@@ -22,10 +22,13 @@ credentials or learner data into public issues.
   out of public repositories and static hosting. Restrict their filesystem
   permissions to the operator and web-server account.
 - Administrators, course authors, and API key holders are privileged. API v1
-  keys have administrative scope. Import SCORM and native archives only from
-  sources you trust; active course packages run in the LMS origin.
+  keys created before 1.13 retain legacy full access; rotate them into explicit
+  scopes. Enable MFA for every administrator. Imported shells are replaced and
+  active SCORM documents run in an opaque-origin sandbox; review actual package
+  compatibility and do not treat imported content as independently audited.
 - Keep the server and PHP extensions updated, test restores, and back up
-  `content/` separately. The built-in data backup does not contain course files.
+  database, private configuration, keys and courses together. Format-2 backups
+  include courses; older data-only backups do not. Protect recovery archives.
 - Verify SSO/LTI against your actual providers before enabling them. SSO does
   not automatically link existing accounts by email; LTI accounts are separate
   platform identities and never inherit site-admin privileges.
