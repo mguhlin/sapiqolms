@@ -636,11 +636,12 @@ route('POST', '/api/v1/users', function () {
 });
 
 route('GET', '/api/v1/users/{id}', function ($p) {
-    require_api_key('users:read');
+    $key = require_api_key('users:read');
     $u = db_one('SELECT id,first_name,last_name,email,role,user_type,campus,organization,created_at FROM users WHERE id=?', [(int) $p['id']]);
     if (!$u) json_out(['error' => 'Not found'], 404);
-    $u['enrollments'] = enrollments_for((int) $u['id']);
-    $u['badges'] = badges_for((int) $u['id']);
+    // Related records need their own scopes; users:read alone returns the profile only.
+    if (api_key_allows($key, 'enrollments:read')) $u['enrollments'] = enrollments_for((int) $u['id']);
+    if (api_key_allows($key, 'badges:read')) $u['badges'] = badges_for((int) $u['id']);
     json_out(['data' => $u]);
 });
 

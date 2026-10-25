@@ -14,6 +14,13 @@ credentials or learner data into public issues.
 
 - Serve only `sapiqo/public/` through Apache or nginx, with HTTPS. Set `public_url`
   in `sapiqo-data/config.local.php` to the installation's canonical URL.
+- Run a patched PHP. PHP2Shell (CVE-2026-109618 and CVE-2026-109619, October
+  2026) allows unauthenticated code execution in PHP itself. It is fixed in 8.2.35,
+  8.3.36, 8.4.27, and 8.5.12, or in a distribution package that backports the fix.
+  `php installer/preflight.php` reports the status. The shipped `.user.ini`,
+  `.htaccess`, Docker, and server templates also set
+  `session.upload_progress.enabled=0`. Sapiqo does not use that feature, and the
+  setting reduces exposure, but only a patched PHP fixes these flaws.
 - Configure `trusted_proxies` with exact proxy addresses when TLS terminates at
   a reverse proxy. Forwarded headers from other clients are ignored.
 - Choose your own administrator credentials. Docker requires `ADMIN_EMAIL` and

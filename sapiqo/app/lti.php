@@ -44,16 +44,18 @@ function lti_keys(): array {
     static $k = null;
     if ($k !== null) return $k;
     $dir = rtrim(lms_config()['data_dir'], '/') . '/lti';
-    if (!is_dir($dir)) @mkdir($dir, 0775, true);
+    if (!is_dir($dir)) @mkdir($dir, 0700, true);
     $privFile = $dir . '/private.pem'; $kidFile = $dir . '/kid';
     if (!is_file($privFile)) {
         $res = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
         openssl_pkey_export($res, $priv);
         file_put_contents($privFile, $priv);
+        @chmod($privFile, 0600);
         $details = openssl_pkey_get_details($res);
         file_put_contents($dir . '/public.pem', $details['key']);
         file_put_contents($kidFile, substr(hash('sha256', $details['key']), 0, 16));
     }
+    if (fileperms($privFile) & 0077) @chmod($privFile, 0600); // tighten keys from older installs
     $priv = (string) file_get_contents($privFile);
     $details = openssl_pkey_get_details(openssl_pkey_get_private($priv));
     $k = ['private' => $priv, 'public' => $details['key'], 'kid' => trim((string) file_get_contents($kidFile)),

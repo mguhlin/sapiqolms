@@ -3,6 +3,11 @@
 # so there is nothing to install on the host.  Build context = the courses/ root.
 FROM php:8.3-apache
 
+# Security — refuse to build on a PHP vulnerable to PHP2Shell (CVE-2026-109618/-109619).
+# `docker build --pull` so the floating 8.3 tag resolves to the latest patch release.
+RUN php -r 'exit(version_compare(PHP_VERSION, "8.3.36", ">=") ? 0 : 1);' \
+    || { echo "PHP $(php -r 'echo PHP_VERSION;') is vulnerable to PHP2Shell; rebuild with --pull" >&2; exit 1; }
+
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \

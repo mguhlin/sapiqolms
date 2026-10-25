@@ -167,6 +167,7 @@ function manager_can_edit_user(int $managerId, int $targetId): bool {
     // A scoped manager must never reset a privileged account's password.
     if (!$target || $target['role'] === 'admin' || !empty($target['can_edit_content'])
         || managed_group_ids($targetId) !== []
+        || db_one('SELECT 1 FROM course_instructors WHERE user_id=?', [$targetId])
         || (function_exists('managed_org_ids') && managed_org_ids($targetId) !== [])) return false;
     $ids = managed_group_ids($managerId);
     if (!$ids) return false;

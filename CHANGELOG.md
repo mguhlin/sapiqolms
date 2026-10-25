@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — security
+
+- Stop group managers from resetting course-instructor passwords.
+- Return enrollments and badges from `GET /api/v1/users/{id}` only when the API
+  key also has `enrollments:read` / `badges:read`.
+- Write the LTI private key 0600 in a 0700 folder, and tighten existing keys.
+- PHP2Shell (CVE-2026-109618/-109619): turn off `session.upload_progress`
+  (unused) in every deployment path. Preflight now reports unpatched PHP, and the
+  Docker build refuses a vulnerable base image. Update PHP to 8.2.35, 8.3.36,
+  8.4.27, 8.5.12 or newer.
+
 ## 1.13.0 — 2026-09-30
 
 - Deliver complete backups/restores, MFA, session revocation, explicit identity

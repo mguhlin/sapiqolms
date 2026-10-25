@@ -22,6 +22,19 @@ echo "\nSapiqo pre-flight check\n$line\n";
 $phpOK = version_compare(PHP_VERSION, '8.1.0', '>=');
 printf("PHP %-8s %s\n", PHP_VERSION, $phpOK ? $ok('OK (>= 8.1)') : $bad('TOO OLD — need 8.1+'));
 
+// --- PHP2Shell (CVE-2026-109618 / CVE-2026-109619, Oct 2026): unauthenticated RCE in the
+// PHP engine itself. Fixed in 8.2.35 / 8.3.36 / 8.4.27 / 8.5.12. Distros that backport
+// (e.g. Ubuntu) may keep an older version number, so this is a warning, not a hard stop.
+$fixed = ['8.2' => '8.2.35', '8.3' => '8.3.36', '8.4' => '8.4.27', '8.5' => '8.5.12'];
+$branch = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+$p2sOK = isset($fixed[$branch]) ? version_compare(PHP_VERSION, $fixed[$branch], '>=')
+                                : version_compare(PHP_VERSION, '8.5.12', '>');
+printf("PHP2Shell     %s\n", $p2sOK ? $ok('patched')
+    : $warn('VULNERABLE unless your distro backported the fix — update PHP to ' . ($fixed[$branch] ?? 'a supported branch') . '+'));
+$upOff = !filter_var(ini_get('session.upload_progress.enabled'), FILTER_VALIDATE_BOOLEAN);
+printf("Upload prog.  %s\n", $upOff ? $ok('off (good)')
+    : $warn('on — set session.upload_progress.enabled=0 in php.ini (app does not use it)'));
+
 // --- Extensions ---
 $required = [
     'pdo' => 'database access', 'mbstring' => 'text handling', 'openssl' => 'SSO/LTI crypto + sessions',

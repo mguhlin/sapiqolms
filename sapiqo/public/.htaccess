@@ -31,10 +31,14 @@ AddType text/vtt .vtt
   php_value post_max_size 1056M
   php_value memory_limit 512M
   php_value max_execution_time 0
+  # Security — PHP2Shell mitigation (upload progress is unused by the app).
+  php_flag session.upload_progress.enabled off
 </IfModule>
 <IfModule mod_php7.c>
   php_value upload_max_filesize 1024M
   php_value post_max_size 1056M
   php_value memory_limit 512M
   php_value max_execution_time 0
+  # Security — PHP2Shell mitigation (upload progress is unused by the app).
+  php_flag session.upload_progress.enabled off
 </IfModule>
