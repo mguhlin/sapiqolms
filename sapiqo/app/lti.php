@@ -171,8 +171,27 @@ function lti_oidc_login(array $req): void {
         'lti_message_hint' => (string) ($req['lti_message_hint'] ?? ''),
         'state' => $state, 'nonce' => $nonce,
     ];
+    lti_state_cookie_set($state);
     header('Location: ' . $platform['auth_login_url'] . '?' . http_build_query($params));
     exit;
+}
+
+// Bind a launch to the browser that started it: /lti/login sets a cookie that the
+// form_post launch must carry, so a captured id_token + state can't be replayed
+// into someone else's browser (login CSRF). SameSite=None needs Secure, so plain-
+// HTTP dev installs skip the binding.
+function lti_state_cookie_name(string $state): string { return 'lti_' . substr(hash('sha256', 'name|' . $state), 0, 16); }
+function lti_state_cookie_set(string $state): void {
+    if (!request_is_https()) return;
+    setcookie(lti_state_cookie_name($state), hash('sha256', $state),
+        ['expires' => time() + 600, 'path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'None']);
+}
+function lti_state_cookie_ok(string $state): bool {
+    if (!request_is_https()) return true;
+    $name = lti_state_cookie_name($state);
+    $ok = hash_equals(hash('sha256', $state), (string) ($_COOKIE[$name] ?? ''));
+    setcookie($name, '', ['expires' => time() - 3600, 'path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'None']);
+    return $ok;
 }
 
 // --- Launch (/lti/launch): verify id_token, provision, launch ----------------
@@ -182,6 +201,7 @@ function lti_launch(array $post): array {
     $state = (string) ($post['state'] ?? '');
     $sess = $state !== '' ? db_one('SELECT * FROM lti_state WHERE state = ?', [$state]) : null;
     if ($idToken === '' || !$sess) return [false, 'Invalid or expired LTI launch state.'];
+    if (!lti_state_cookie_ok($state)) return [false, 'This LTI launch did not start in this browser. Start it again from your course.'];
     db_run('DELETE FROM lti_state WHERE state = ?', [$state]);   // single-use
     if (strtotime($sess['created_at'] . ' UTC') < time() - 600) return [false, 'LTI launch expired.'];
     $platform = lti_platform_by_id((int) $sess['platform_id']);

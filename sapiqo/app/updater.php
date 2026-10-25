@@ -14,6 +14,53 @@ require_once __DIR__ . '/version.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/course_io.php';   // io_tmp_dir(), _copy_tree(), _rmtree()
 
+// --- Package signing (Ed25519 via libsodium) ---------------------------------
+// A package is trusted only when update.sig is a valid signature of update.json's
+// exact bytes by a trusted key AND every file under code/ matches the manifest's
+// sha256 list. Trusted keys = UPDATE_RELEASE_KEYS plus config.local.php
+// 'update_trusted_keys' (base64 public keys). 'allow_unsigned_updates' => true in
+// config.local.php accepts unsigned packages; it is file-level config on purpose,
+// so a stolen admin web session can't switch it on and push code.
+// Sign with:  php bin/build-update.php [out_dir] --key=/path/to/update-signing.key
+const UPDATE_RELEASE_KEYS = ['2LVjsLQDxaI+22kQPOrfm6TUBtdzH79z1+SRhHMhFdA='];
+
+function update_trusted_keys(): array {
+    $keys = [];
+    foreach (array_merge(UPDATE_RELEASE_KEYS, (array) (lms_config()['update_trusted_keys'] ?? [])) as $b64) {
+        $k = base64_decode((string) $b64, true);
+        if ($k !== false && strlen($k) === 32) $keys[] = $k;
+    }
+    return $keys;
+}
+
+function update_signature_valid(string $manifestBytes, string $sigB64): bool {
+    $sig = base64_decode(trim($sigB64), true);
+    if (!function_exists('sodium_crypto_sign_verify_detached') || $sig === false || strlen($sig) !== 64) return false;
+    foreach (update_trusted_keys() as $pk) {
+        if (sodium_crypto_sign_verify_detached($sig, $manifestBytes, $pk)) return true;
+    }
+    return false;
+}
+
+// Every file under $codeDir must be listed with a matching hash, and every listed file present.
+function update_tree_matches(string $codeDir, array $hashes): bool {
+    $seen = 0;
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($codeDir, FilesystemIterator::SKIP_DOTS));
+    foreach ($it as $f) {
+        $rel = str_replace('\\', '/', ltrim(substr($f->getPathname(), strlen($codeDir)), '/\\'));
+        if (!isset($hashes[$rel]) || !hash_equals((string) $hashes[$rel], (string) hash_file('sha256', $f->getPathname()))) return false;
+        $seen++;
+    }
+    return $seen === count($hashes);
+}
+
+// Load a signing key file: base64 of the 64-byte Ed25519 secret key.
+function update_load_secret_key(string $path): string {
+    $sk = base64_decode(trim((string) @file_get_contents($path)), true);
+    if ($sk === false || strlen($sk) !== 64) throw new RuntimeException("Not a valid signing key: $path");
+    return $sk;
+}
+
 function update_current_version(): string { return defined('APP_VERSION') ? APP_VERSION : '0.0.0'; }
 
 // The replaceable code root (the sapiqo/ folder).
@@ -59,7 +106,7 @@ function _update_iter_code(string $root): Generator {
 
 // Build a distributable update package from the current code. Returns its path.
 // $meta lets the caller stamp created_at (scripts can't call time() in some envs).
-function build_update_package(string $outDir, array $meta = []): string {
+function build_update_package(string $outDir, array $meta = [], ?string $secretKey = null): string {
     if (!is_dir($outDir) && !@mkdir($outDir, 0775, true)) throw new RuntimeException("Cannot create $outDir");
     $root = update_code_root();
     $ver  = update_current_version();
@@ -81,13 +128,16 @@ function build_update_package(string $outDir, array $meta = []): string {
     $tar = rtrim($outDir, '/') . "/sapiqo-update-$ver.tar";
     @unlink($tar); @unlink($tar . '.gz');
     $p = new PharData($tar);
-    $count = 0;
+    $hashes = [];
     foreach (_update_iter_code($root) as [$abs, $rel]) {
         $p->addFile($abs, 'code/' . $rel);
-        $count++;
+        $hashes[$rel] = hash_file('sha256', $abs);
     }
-    $manifest['files'] = $count;
-    $p->addFromString('update.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $manifest['files'] = count($hashes);
+    $manifest['sha256'] = $hashes;
+    $json = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    $p->addFromString('update.json', $json);
+    if ($secretKey !== null) $p->addFromString('update.sig', base64_encode(sodium_crypto_sign_detached($json, $secretKey)) . "\n");
     $p->compress(Phar::GZ);          // -> $tar.gz
     unset($p);
     @unlink($tar);                   // keep only the compressed package
@@ -151,7 +201,8 @@ function apply_update_package(string $tmpFile, string $origName, bool $force = f
         // Manifest is required and identifies this as a real update package.
         $manifestPath = "$stage/update.json";
         if (!is_file($manifestPath)) return [false, 'Not a valid update package (no update.json).', []];
-        $manifest = json_decode((string) file_get_contents($manifestPath), true) ?: [];
+        $manifestBytes = (string) file_get_contents($manifestPath);
+        $manifest = json_decode($manifestBytes, true) ?: [];
         if (($manifest['name'] ?? '') !== 'sapiqo-update') {
             return [false, 'This package is not a Sapiqo update.', []];
         }
@@ -163,6 +214,22 @@ function apply_update_package(string $tmpFile, string $origName, bool $force = f
         $srcCode = "$stage/code";
         if (!is_file("$srcCode/app/config.php") || !is_dir("$srcCode/public")) {
             return [false, 'The package is missing the expected code/ tree.', $manifest];
+        }
+
+        if (is_file($srcCode . '/app/config.local.php') || is_dir($srcCode . '/data')) {
+            return [false, 'Update packages must not contain local configuration or runtime data.', $manifest];
+        }
+
+        // Authenticity: "apply anyway" never bypasses this (see UPDATE_RELEASE_KEYS).
+        $signed = is_file("$stage/update.sig")
+            && update_signature_valid($manifestBytes, (string) file_get_contents("$stage/update.sig"));
+        if (!$signed && empty(lms_config()['allow_unsigned_updates'])) {
+            return [false, 'This package is not signed by a trusted Sapiqo release key, so it was not applied. '
+                . 'Use an official signed package, or (for your own builds) add your public key to '
+                . "'update_trusted_keys' in config.local.php.", $manifest];
+        }
+        if ($signed && !update_tree_matches($srcCode, (array) ($manifest['sha256'] ?? []))) {
+            return [false, 'The package files do not match its signed manifest; it may have been altered.', $manifest];
         }
 
         if (!$force && version_compare($newVer, $curVer, '<=')) {
@@ -181,10 +248,6 @@ function apply_update_package(string $tmpFile, string $origName, bool $force = f
             return [false, "This package was built from a different edition (\"$pkgEdition\") than this "
                 . "install (\"$curEdition\"). Applying it may overwrite code this install genuinely needs "
                 . "to be different. Tick “apply anyway” only if you're sure.", $manifest + ['current_edition' => $curEdition]];
-        }
-
-        if (is_file($srcCode . '/app/config.local.php') || is_dir($srcCode . '/data')) {
-            return [false, 'Update packages must not contain local configuration or runtime data.', $manifest];
         }
 
         // Back up current code first (rollback safety net).

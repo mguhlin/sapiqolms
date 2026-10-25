@@ -6,6 +6,19 @@
 - Return enrollments and badges from `GET /api/v1/users/{id}` only when the API
   key also has `enrollments:read` / `badges:read`.
 - Write the LTI private key 0600 in a 0700 folder, and tighten existing keys.
+- Accept only update packages signed with a trusted Ed25519 release key, and
+  check every file against the signed manifest. `bin/build-update.php --key=`
+  signs; `--keygen=` creates a key. Own builds: add the public key to
+  `update_trusted_keys`. `allow_unsigned_updates` exists only in
+  `config.local.php`.
+- Ask for the password (or an MFA code) again, within 10 minutes, before
+  software updates, rollback, backup download, API keys and LTI platform
+  registration.
+- Bind LTI launches to the browser that started them (login CSRF).
+- Lock MFA code entry after 20 wrong codes in 24 hours and notify the owner.
+- Neutralize spreadsheet formulas hidden behind leading spaces or quotes in CSV
+  exports, and sandbox SVGs opened from admin uploads.
+- Join tar `prefix` fields only for real ustar headers when checking archives.
 - PHP2Shell (CVE-2026-109618/-109619): turn off `session.upload_progress`
   (unused) in every deployment path. Preflight now reports unpatched PHP, and the
   Docker build refuses a vulnerable base image. Update PHP to 8.2.35, 8.3.36,

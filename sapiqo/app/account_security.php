@@ -57,6 +57,30 @@ function security_reauthenticate(array $user): bool {
     if (empty($user['password_hash'])) return (int)($_SESSION['reauth_at'] ?? 0) >= time()-300;
     return password_verify((string) ($_POST['current_password'] ?? ''), $user['password_hash']);
 }
+// --- Step-up re-authentication -------------------------------------------------
+// The most dangerous admin actions (code updates/rollback, full backups, API keys,
+// LTI platforms) need the password or MFA code confirmed within REAUTH_WINDOW
+// seconds, so a stolen or unattended admin session alone can't run them.
+const REAUTH_WINDOW = 600;
+
+function recent_auth_ok(): bool {
+    return !is_impersonating() && (int) ($_SESSION['reauth_at'] ?? 0) >= time() - REAUTH_WINDOW;
+}
+
+// $return is the page to come back to after confirming (a GET route).
+function require_recent_auth(string $return): void {
+    if (recent_auth_ok()) return;
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        flash('For your security, confirm it is you, then repeat the action.', 'error');
+    }
+    redirect('/reauth?next=' . rawurlencode($return));
+}
+
+// Only same-site paths are valid return targets (no scheme, host, or "//").
+function reauth_next(string $next): string {
+    return preg_match('#^/(?!/)[A-Za-z0-9/_.\-]*$#', $next) ? $next : '/admin';
+}
+
 function identity_link(int $uid, string $provider, string $subject): bool {
     if ($subject === '' || strlen($subject) > 191) return false;
     $original = db_one('SELECT id FROM users WHERE auth_provider=? AND provider_sub=?', [$provider,$subject]);

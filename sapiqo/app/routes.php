@@ -11,6 +11,34 @@ route('GET', '/', function () {
     require dirname(__DIR__) . '/app/views/splash.php';
 });
 
+// Step-up confirmation for sensitive admin actions (see require_recent_auth()).
+route('GET', '/reauth', function () {
+    require_login();
+    $u = current_user();
+    view('reauth', ['next' => reauth_next(input('next')), 'has_password' => !empty($u['password_hash']),
+        'has_mfa' => !empty($u['mfa_secret'])], 'Confirm it\'s you');
+});
+
+route('POST', '/reauth', function () {
+    csrf_check();
+    require_login();
+    $u = current_user();
+    $next = reauth_next(input('next'));
+    $ident = 'reauth:' . (int) $u['id'];
+    if (is_impersonating()) { flash('Switch back to your own account first.', 'error'); redirect('/dashboard'); }
+    if (login_is_blocked($ident)[0]) { flash('Too many attempts. Try again later.', 'error'); redirect('/reauth?next=' . rawurlencode($next)); }
+    if ((empty($u['password_hash']) && empty($u['mfa_secret'])) || !security_reauthenticate($u)) {
+        login_record_attempt($ident, false);
+        audit('auth.reauth.fail');
+        flash('That did not match. Try again.', 'error');
+        redirect('/reauth?next=' . rawurlencode($next));
+    }
+    login_clear_failures($ident);
+    $_SESSION['reauth_at'] = time();
+    audit('auth.reauth');
+    redirect($next);
+});
+
 route('GET', '/login', function () {
     if (is_logged_in()) redirect('/dashboard');
     view('login', ['providers' => sso_providers()], 'Sign in');
@@ -1231,6 +1259,8 @@ route('GET', '/uploads/{name}', function ($p) {
     header('Content-Type: ' . ($types[$ext] ?? 'application/octet-stream'));
     header('Content-Length: ' . filesize($file));
     header('X-Content-Type-Options: nosniff');
+    // An SVG opened directly could run script on this origin; sandbox it like serve.php does.
+    if ($ext === 'svg') header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; sandbox");
     readfile($file);
     exit;
 });
@@ -1843,6 +1873,7 @@ route('GET', '/admin/resources/{slug}', function ($p) {
 // Download a fresh backup of the data root (config, DB, badges, avatars, uploads).
 route('GET', '/admin/backup', function () {
     require_admin();
+    require_recent_auth('/admin/import');
     try {
         $tmpDir = sys_get_temp_dir() . '/lmsbak-' . bin2hex(random_bytes(4));
         $file = create_backup($tmpDir);
@@ -1984,6 +2015,7 @@ route('GET', '/admin/lti', function () {
 route('POST', '/admin/lti', function () {
     csrf_check();
     require_admin();
+    require_recent_auth('/admin/lti');
     $id = lti_platform_create([
         'name' => input('name'), 'issuer' => input('issuer'), 'client_id' => input('client_id'),
         'deployment_id' => input('deployment_id'), 'auth_login_url' => input('auth_login_url'),
@@ -2008,6 +2040,7 @@ route('POST', '/admin/lti/{id}/delete', function ($p) {
 
 route('GET', '/admin/api-keys', function () {
     require_admin();
+    require_recent_auth('/admin/api-keys');
     $new = $_SESSION['new_api_key'] ?? null;
     unset($_SESSION['new_api_key']);
     view('admin/api_keys', ['keys' => api_keys_all(), 'new' => $new], 'API keys');
@@ -2016,6 +2049,7 @@ route('GET', '/admin/api-keys', function () {
 route('POST', '/admin/api-keys', function () {
     csrf_check();
     require_admin();
+    require_recent_auth('/admin/api-keys');
     $scopes = array_values(array_intersect(array_filter((array)($_POST['scopes'] ?? []), 'is_string'), api_key_scopes()));
     if (!$scopes) { flash('Select at least one API scope.', 'error'); redirect('/admin/api-keys'); }
     [$id, $token] = api_key_create(input('name'), (int) current_user()['id'], $scopes);
@@ -2253,6 +2287,7 @@ route('POST', '/admin/help-editor/{slug}/reset', function ($p) {
 // --- Software updates (WordPress-style code update via the web) ---------------
 route('GET', '/admin/update', function () {
     require_admin();
+    require_recent_auth('/admin/update');
     require_once dirname(__DIR__) . '/app/updater.php';
     view('admin/update', [
         'version'       => update_current_version(),
@@ -2268,6 +2303,7 @@ route('GET', '/admin/update', function () {
 route('POST', '/admin/update', function () {
     require_admin();
     csrf_check();
+    require_recent_auth('/admin/update');
     require_once dirname(__DIR__) . '/app/updater.php';
     @set_time_limit(0);
     if (empty($_FILES['package']['tmp_name']) || !is_uploaded_file($_FILES['package']['tmp_name'])) {
@@ -2283,6 +2319,7 @@ route('POST', '/admin/update', function () {
 // Build + download a distributable update package from THIS install's code.
 route('GET', '/admin/update/download', function () {
     require_admin();
+    require_recent_auth('/admin/update');
     require_once dirname(__DIR__) . '/app/updater.php';
     @set_time_limit(0);
     try {
@@ -2304,6 +2341,7 @@ route('GET', '/admin/update/download', function () {
 route('POST', '/admin/update/rollback', function () {
     require_admin();
     csrf_check();
+    require_recent_auth('/admin/update');
     require_once dirname(__DIR__) . '/app/updater.php';
     @set_time_limit(0);
     [$ok, $msg] = rollback_update(input('file') !== '' ? input('file') : null);

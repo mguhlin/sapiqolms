@@ -51,6 +51,25 @@ Cada actualización aplicada primero guarda aquí el código anterior. Para desh
 **Roll back** junto a una copia de seguridad y confirma; restaura ese código (el más reciente está
 marcado). Vuelve a cargar para ejecutar sobre el código restaurado.
 
+### Verificación de seguridad y paquetes firmados
+
+Esta página, la descarga de la copia de seguridad y la página de claves de API te
+piden confirmar tu contraseña (o, con la verificación en dos pasos activa, un código del autenticador) si no lo has hecho en los últimos 10 minutos. Así, quien
+encuentre un navegador con una sesión de administrador abierta no puede cambiar el
+código del sitio ni descargar sus datos.
+
+Solo se aplican paquetes firmados con una clave de versión de confianza de Sapiqo.
+Marcar **"Apply anyway"** no omite esta verificación. Los paquetes de
+**Download update package** no están firmados, así que otra instalación
+los rechaza salvo que su `config.local.php` tenga `'allow_unsigned_updates' => true`.
+Para confiar en tus propias compilaciones:
+
+1. Crea una clave una sola vez: `php bin/build-update.php --keygen=/lugar/seguro/update-signing.key`
+2. Agrega la clave pública que muestra a `'update_trusted_keys'` en `config.local.php`.
+3. Crea paquetes firmados: `php bin/build-update.php out/ --key=/lugar/seguro/update-signing.key`
+
+Guarda el archivo de la clave secreta fuera del servidor.
+
 ## Opciones y comportamiento
 
 **Cómo luce un paquete válido.** Un paquete es un `.tar.gz` (`.tgz`/`.tar` también

@@ -13,12 +13,14 @@ require_once __DIR__ . '/groups.php';
 // can exfiltrate data or run commands when the file is opened. Names/emails/
 // titles in these exports are user-supplied (self-registration, course
 // titles, …), so every export route should call this instead of fputcsv().
-// Prefixing with a tab neutralizes the formula while keeping the value visible
-// and round-trippable (Excel/Sheets/LibreOffice all display it as plain text).
+// Some apps trim leading whitespace or quotes first, so the trigger is checked
+// after those too. A leading apostrophe (OWASP's recommendation) makes the cell
+// plain text in Excel, Sheets, and LibreOffice.
 function csv_out($fh, array $row): void {
     fputcsv($fh, array_map(function ($v) {
         $s = (string) $v;
-        return $s !== '' && strpbrk($s[0], "=+-@") !== false ? "\t" . $s : $s;
+        $t = ltrim($s, " \t\r\n\0\x0B\"'");
+        return $t !== '' && strpbrk($t[0], "=+-@|%") !== false ? "'" . $s : $s;
     }, $row));
 }
 

@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+const MFA_DAILY_MAX = 20;
 route('GET', '/mfa/challenge', function () {
     $pending = $_SESSION['mfa_pending'] ?? null;
     if (!$pending || $pending['expires'] < time()) { unset($_SESSION['mfa_pending']); redirect('/login'); }
@@ -10,8 +11,17 @@ route('POST', '/mfa/challenge', function () {
     if (!$pending || $pending['expires'] < time()) { unset($_SESSION['mfa_pending']); redirect('/login'); }
     $ident = 'mfa:' . $pending['uid'];
     $user = db_one('SELECT * FROM users WHERE id=?', [$pending['uid']]);
-    if (login_is_blocked($ident)[0] || !$user || (int)($user['session_version'] ?? 0) !== $pending['version'] || !mfa_verify((int)$user['id'], input('code'))) {
-        login_record_attempt($ident, false); flash('Verification failed or temporarily rate limited.', 'error'); redirect('/mfa/challenge');
+    // Long-term cap on top of the 15-minute throttle: MFA_DAILY_MAX wrong codes in 24 hours
+    // locks code entry for the rest of that window, and the owner is told once.
+    $daily = (int) (db_one('SELECT COUNT(*) n FROM login_attempts WHERE ident=? AND success=0 AND created_at>=?',
+        [$ident, gmdate('Y-m-d H:i:s', time() - 86400)])['n'] ?? 0);
+    if ($daily >= MFA_DAILY_MAX || login_is_blocked($ident)[0] || !$user || (int)($user['session_version'] ?? 0) !== $pending['version'] || !mfa_verify((int)$user['id'], input('code'))) {
+        login_record_attempt($ident, false);
+        if ($user && $daily + 1 === MFA_DAILY_MAX) {
+            audit('login.mfa_locked', ['actor_id' => (int) $user['id'], 'actor_email' => $user['email']]);
+            notify((int) $user['id'], 'Someone entered your password but failed two-step verification many times. Two-step sign-in is locked for 24 hours. Change your password now.', '/profile/security');
+        }
+        flash('Verification failed or temporarily rate limited.', 'error'); redirect('/mfa/challenge');
     }
     login_clear_failures($ident); login_user($user, true); audit('login.mfa_success');
     code_apply_pending((int)$user['id']);

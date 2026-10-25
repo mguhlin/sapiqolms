@@ -21,6 +21,9 @@ credentials or learner data into public issues.
   `.htaccess`, Docker, and server templates also set
   `session.upload_progress.enabled=0`. Sapiqo does not use that feature, and the
   setting reduces exposure, but only a patched PHP fixes these flaws.
+- Apply only signed update packages. Admin → Software updates refuses packages
+  that are not signed by a trusted key. Keep `allow_unsigned_updates` off, and keep
+  any signing key you create off the server.
 - Configure `trusted_proxies` with exact proxy addresses when TLS terminates at
   a reverse proxy. Forwarded headers from other clients are ignored.
 - Choose your own administrator credentials. Docker requires `ADMIN_EMAIL` and

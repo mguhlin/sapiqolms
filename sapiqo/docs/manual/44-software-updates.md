@@ -51,6 +51,23 @@ Every applied update first saves the previous code here. To undo an update, clic
 **Roll back** next to a backup and confirm; it restores that code (most recent is
 marked). Reload to run on the restored code.
 
+### Security check and signed packages
+
+This page, the backup download, and the API keys page ask you to confirm your password (or, with two-step verification on, an authenticator code) if
+you haven't in the last 10 minutes. Someone who finds a signed-in admin browser
+still can't change the site's code or download its data.
+
+Only packages signed with a trusted Sapiqo release key are applied. Ticking
+"Apply anyway" doesn't skip this check. Packages from **Download update package**
+are unsigned, so another install refuses them unless its `config.local.php` sets
+`'allow_unsigned_updates' => true`. To trust your own builds instead:
+
+1. Create a key once: `php bin/build-update.php --keygen=/safe/place/update-signing.key`
+2. Add the public key it prints to `'update_trusted_keys'` in `config.local.php`.
+3. Build signed packages: `php bin/build-update.php out/ --key=/safe/place/update-signing.key`
+
+Keep the secret key file off the server.
+
 ## Options & behavior
 
 **What a valid package looks like.** A package is a `.tar.gz` (`.tgz`/`.tar` also

@@ -30,6 +30,7 @@ $fmtSize = fn($b) => $b >= 1048576 ? round($b / 1048576, 1) . ' MB' : max(1, rou
   <h2>Apply an update</h2>
   <p>Upload an update package (<code>.tar.gz</code>) you were given or built. The installed version is compared to the
     package; only newer packages apply unless you force it.<?= $edition !== '' ? ' If the package was built from a different edition than this install, it\'s also refused unless you force it.' : '' ?></p>
+  <p class="muted">Only packages signed with a trusted Sapiqo release key are applied. Forcing never skips this check.</p>
   <form method="post" action="<?= e(url('/admin/update')) ?>" enctype="multipart/form-data"
         data-confirm="Apply this update? The current code will be backed up first.">
     <?= csrf_field() ?>
@@ -49,10 +50,11 @@ $fmtSize = fn($b) => $b >= 1048576 ? round($b / 1048576, 1) . ' MB' : max(1, rou
 <div class="card">
   <h2>Create an update package</h2>
   <p>Build a distributable package from <em>this</em> install's current code (version <?= e($version) ?>). Hand the file to
-    another install and apply it there, or keep it as a code snapshot.</p>
+    another install and apply it there, or keep it as a code snapshot. Packages downloaded here are unsigned, so other
+    installs refuse them unless their <code>config.local.php</code> sets <code>'allow_unsigned_updates' =&gt; true</code>.</p>
   <a class="btn btn-navy" href="<?= e(url('/admin/update/download')) ?>">⬇ Download update package</a>
   <p class="muted" style="font-size:.84rem;margin-top:8px">From the command line you can also run
-    <code>php bin/build-update.php</code>.</p>
+    <code>php bin/build-update.php --key=/path/to/update-signing.key</code> to build a signed package.</p>
 </div>
 
 <div class="card">

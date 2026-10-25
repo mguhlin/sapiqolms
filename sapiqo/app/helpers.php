@@ -386,7 +386,8 @@ function archive_entries_safe(string $archivePath): bool {
             if ($h === str_repeat("\0", 512)) return $entries > 0;
             if (strlen($h) !== 512 || ++$entries > $maxEntries) return false;
             $name = rtrim(substr($h, 0, 100), "\0");
-            $prefix = rtrim(substr($h, 345, 155), "\0");
+            // Join the ustar prefix only for real ustar headers, matching what PharData extracts.
+            $prefix = substr($h, 257, 5) === 'ustar' ? rtrim(substr($h, 345, 155), "\0") : '';
             if ($prefix !== '') $name = $prefix . '/' . $name;
             $type = $h[156];
             // Reject links/devices and PAX/GNU extended headers (hidden paths).

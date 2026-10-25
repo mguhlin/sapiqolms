@@ -121,4 +121,12 @@ return [
     //   'x_sendfile' => true,
     'x_accel_redirect' => '',
     'x_sendfile'       => false,
+
+    // --- Software updates: package signing --------------------------------------
+    // Admin → Updates applies only packages signed by a trusted key. Add your own
+    // public key here to trust packages you build with
+    //   php bin/build-update.php out/ --key=/path/to/update-signing.key
+    // Leave allow_unsigned_updates false in production.
+    'update_trusted_keys'    => [],
+    'allow_unsigned_updates' => false,
 ];
