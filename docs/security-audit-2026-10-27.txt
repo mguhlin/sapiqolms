@@ -1,0 +1,22 @@
+Security maintenance — 2026-10-27
+
+Scope: known npm advisories in tracked lockfiles, GitHub Actions references and
+permissions, dependency maintenance controls, and the checks listed below.
+This is a scoped maintenance review, not a full penetration test or assurance
+against unknown vulnerabilities. Historical release archives, external CDNs,
+cloud/account configuration, and separately installed self-hosted instances are
+not covered by a zero-advisory lockfile result. A package advisory count can
+include development-only dependencies and repeat across projects.
+
+Pinned existing verification and publication actions to official commit hashes
+and disabled persisted checkout credentials. Added weekly GitHub Actions/npm
+Dependabot coverage. The existing package lock reports zero known advisories.
+No PHP application code was changed. The existing Dockerfile already refuses
+PHP 8.3 versions older than the documented PHP2Shell security floor (8.3.36).
+An external host must still supply a patched PHP runtime; this repository update
+does not patch installed servers.
+
+Checks: 84 security regression checks, backup/restore round trip, Markdown URL
+regressions, PHP/JavaScript/shell/Python syntax checks, 39 HTTP regressions, and
+reset/quiz/MFA/assignment concurrency tests all passed. Workflow YAML parsed
+and immutable action references checked.
