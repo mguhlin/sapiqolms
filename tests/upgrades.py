@@ -15,14 +15,15 @@ with tempfile.TemporaryDirectory(prefix='sapiqo-upgrade-') as scratch:
     command="require "+repr(str(code/'app/updater.php'))+"; echo json_encode(apply_update_package("+repr(package)+",basename("+repr(package)+")));"
     result=json.loads(subprocess.check_output(['php','-r',command],env=env,text=True));assert result[0],result
     command="require "+repr(str(code/'app/db.php'))+"; ensure_schema(); echo json_encode([APP_VERSION,DB_SCHEMA_VERSION,db_one('SELECT email FROM users')['email']]);"
-    current=json.loads(subprocess.check_output(['php','-r',command],env=env,text=True));assert current[0]=='1.13.0' and current[1]==22 and current[2]=='upgrade@example.org',current
+    current=json.loads(subprocess.check_output(['php','-r',command],env=env,text=True));assert current[0]=='1.13.1' and current[1]==22 and current[2]=='upgrade@example.org',current
     assert config.read_bytes()==config_before and sentinel.read_text()=='Keep course content'
+    assert (code/'public/assets/js/course-reader.js').read_bytes()==(ROOT/'sapiqo/public/assets/js/course-reader.js').read_bytes()
     command="require "+repr(str(code/'app/updater.php'))+"; echo json_encode(rollback_update());"
     result=json.loads(subprocess.check_output(['php','-r',command],env=env,text=True));assert result[0],result
     command="require "+repr(str(code/'app/db.php'))+"; ensure_schema(); echo APP_VERSION;"
     assert subprocess.check_output(['php','-r',command],env=env,text=True)=='1.12.1'
     assert config.read_bytes()==config_before and sentinel.read_text()=='Keep course content'
-    print('v1.12.1 → v1.13.0 upgrade, additive schema migration and code rollback preserve users, config and course files.')
+    print('v1.12.1 → v1.13.1 upgrade, additive schema migration and code rollback preserve users, config and course files.')
 
 # Package signing: the current updater applies only packages signed by a trusted key.
 with tempfile.TemporaryDirectory(prefix='sapiqo-signing-') as scratch:

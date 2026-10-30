@@ -23,9 +23,14 @@
   let FLAT = []; // flat ordered list of steps: {type, moduleKey, lesson, topic?, id, title}
   let PROGRESS_KEY = "sapiqo-course-progress";
 
+  function isAuthorPreview() {
+    return !!(COURSE && COURSE.settings && COURSE.settings.author_preview);
+  }
+
   // --- Progress store (localStorage; Sapiqo-compatible shape) ---------------
   const Progress = {
     load() {
+      if (isAuthorPreview()) return {};
       try {
         return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {};
       } catch (_) {
@@ -41,6 +46,7 @@
       return !!this.data[id];
     },
     set(id, done) {
+      if (isAuthorPreview()) return;
       if (done) this.data[id] = { completed_at: new Date().toISOString() };
       else delete this.data[id];
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(this.data));
@@ -49,6 +55,7 @@
     // Update the local store only (used when the server already recorded the
     // step, e.g. an authoritative quiz pass — avoids a duplicate POST).
     setLocal(id, done) {
+      if (isAuthorPreview()) return;
       if (done) this.data[id] = { completed_at: new Date().toISOString() };
       else delete this.data[id];
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(this.data));
@@ -67,6 +74,7 @@
     slug: null,
     async init(slug) {
       this.slug = slug;
+      if (isAuthorPreview()) return false;
       try {
         this.base = new URL("../../api/", location.href).href;
         const r = await fetch(this.base + "whoami", { credentials: "same-origin" });
@@ -211,7 +219,7 @@
   let _curLesson = null, _nextStep = null, _nextBtn = null;
 
   function isSequential() {
-    return !!(COURSE.settings && COURSE.settings.sequential);
+    return !isAuthorPreview() && !!(COURSE.settings && COURSE.settings.sequential);
   }
 
   // A lesson counts as complete (for gating the next) when its lesson unit is
@@ -330,6 +338,13 @@
   }
 
   function updateProgressMeter() {
+    if (isAuthorPreview()) {
+      els.progressBar.style.width = "0%";
+      els.progressPct.textContent = "";
+      els.progressCount.textContent = "Course preview · all lessons open";
+      els.progressCount.title = "Previewing does not record learner progress.";
+      return;
+    }
     const ids = allUnitIds();
     const done = countDone(ids);
     const pct = ids.length ? Math.round((done / ids.length) * 100) : 0;
@@ -430,6 +445,7 @@
   }
 
   function makeCompleteBtn(unitId, kind) {
+    if (isAuthorPreview()) return el("span", { class: "muted" }, ["Preview · progress is not recorded"]);
     function label() {
       return Progress.isDone(unitId)
         ? (kind === "topic" ? "Topic complete" : "Completed")
@@ -709,6 +725,7 @@
   }
 
   function resumeLabel() {
+    if (isAuthorPreview()) return "Preview the course →";
     const ids = allUnitIds();
     const done = countDone(ids);
     if (done === 0) return "Start the course →";

@@ -10,7 +10,7 @@ and issue badges and CPE certificates.
 [User manual](sapiqo/docs/manual/README.md) · [Code audit](docs/CODE_AUDIT.md) ·
 [Planned roadmap](docs/ROADMAP.md)**
 
-Version **1.13.0**. Original project material: **© 2026 Miguel Guhlin · CC BY-SA 4.0**.
+Version **1.13.1**. Original project material: **© 2026 Miguel Guhlin · CC BY-SA 4.0**.
 
 GitHub Pages hosts the project introduction. To run the LMS, install it on a PHP
 server or use Docker; Pages cannot execute PHP or store learner accounts.

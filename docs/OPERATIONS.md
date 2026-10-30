@@ -133,3 +133,9 @@ reset an organizational installation. No public demo server or production PHP
 host was configured in this repository; deployment instructions do not constitute
 a deployed demo. Use the pilot protocol before making institutional support or
 accessibility-conformance claims.
+
+Course preview updates (1.13.1): administrator and course-author previews open
+all lessons without recording learner progress. The runtime reader is bundled
+under `sapiqo/public/assets/js/course-reader.js`, so signed code updates carry
+the matching script. Shared `content/assets` still supports standalone exports.
+Learner enrollment, draft restrictions and sequential access remain enforced.

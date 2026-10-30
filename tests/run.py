@@ -164,4 +164,5 @@ with tempfile.TemporaryDirectory(prefix='sapiqo-tests-') as scratch:
         text=log.read();log.close()
         errors=[line for line in text.splitlines() if any(x in line for x in ('Fatal error','Warning:','Deprecated:'))]
         if errors:raise AssertionError('Server diagnostics: '+'\n'.join(errors))
+run('python3', str(ROOT/'tests/admin-preview.py'))
 print('All tests passed.')

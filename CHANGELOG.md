@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.1 — October 30, 2026
+
+- Open every lesson in administrator/course-author previews without paid enrollment or learner-order locks. Learners retain sequential access checks.
+- Label preview mode, avoid recording preview progress, and version the reader script so refreshed course tabs receive the fix.
+- Bundle the runtime reader in signed code updates; retain matching shared assets for standalone course exports.
+- Cover administrator Open links, late-module navigation, learner restrictions and unchanged progress in HTTP and browser regressions.
+
 ## Unreleased — security
 
 - Stop group managers from resetting course-instructor passwords.

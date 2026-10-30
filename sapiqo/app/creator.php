@@ -557,6 +557,7 @@ function cr_write_shell(string $outDir, string $title, string $desc): void {
 function cr_shell_html(string $title, string $desc, bool $runtime = false): string {
     $t = htmlspecialchars($title, ENT_QUOTES); $d = htmlspecialchars($desc, ENT_QUOTES);
     $home = $runtime ? htmlspecialchars(url('/dashboard'), ENT_QUOTES) : '../index.html';
+    $readerScript = $runtime ? url('/assets/js/course-reader.js') . '?v=' . rawurlencode(APP_VERSION) : '../assets/js/reader.js';
     $cfg = lms_config();
     $brand = htmlspecialchars($cfg['catalog_name'] ?? ($cfg['app_name'] . ' Courses'), ENT_QUOTES);
     $mark = htmlspecialchars(mb_substr($cfg['brand_mark'] ?? mb_substr($cfg['app_name'], 0, 1), 0, 2), ENT_QUOTES);
@@ -580,7 +581,7 @@ function cr_shell_html(string $title, string $desc, bool $runtime = false): stri
       <nav class="sidebar__nav" id="nav" aria-label="Modules and lessons"></nav></aside>
     <main class="reader" id="reader" tabindex="-1"></main><div class="backdrop" id="backdrop"></div>
   </div>
-  <script src="../assets/js/reader.js"></script>
+  <script src="$readerScript"></script>
 </body></html>
 HTML;
 }

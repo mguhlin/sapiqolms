@@ -192,6 +192,8 @@ function course_settings_overlay(array $data, string $slug): array {
     $row = course_by_slug($slug);
     if (!$row) return $data;
     $settings = is_array($data['settings'] ?? null) ? $data['settings'] : [];
+    // The server decides preview capability; never trust a course-supplied flag.
+    $settings['author_preview'] = function_exists('can_edit_content') && can_edit_content();
     $settings['sequential'] = course_is_sequential($row);
     $settings['assignment_count'] = count(assignment_list((int)$row['id']));
     $settings['required_assignments'] = count(array_filter(assignment_list((int)$row['id']), fn($a)=>!empty($a['required_completion'])));

@@ -2,7 +2,7 @@ const {chromium}=require(process.env.SAPIQO_PLAYWRIGHT || 'playwright');
 const assert=require('node:assert/strict');
 let browser;
 (async()=>{
-  browser=await chromium.launch({headless:true});
+  browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});
   const page=await browser.newPage({viewport:{width:1440,height:1000}}); const errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   for(const width of [1440,375]) {
