@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.13.1 — October 30, 2026
+<a id="1-13-1-october-30-2026"></a><a id="1131--october-30-2026"></a>
+
+## 1.13.1
 
 - Open every lesson in administrator/course-author previews without paid enrollment or learner-order locks. Learners retain sequential access checks.
 - Label preview mode, avoid recording preview progress, and version the reader script so refreshed course tabs receive the fix.
@@ -31,7 +33,9 @@
   Docker build refuses a vulnerable base image. Update PHP to 8.2.35, 8.3.36,
   8.4.27, 8.5.12 or newer.
 
-## 1.13.0 — 2026-09-30
+<a id="1-13-0-2026-09-30"></a><a id="1130--2026-09-30"></a>
+
+## 1.13.0
 
 - Deliver complete backups/restores, MFA, session revocation, explicit identity
   linking, scoped API keys and isolated active-content shells.
@@ -47,7 +51,9 @@ are retained; legacy API keys keep access until rotated. Update shared reader
 assets alongside code. Custom imported root-shell scripts are replaced by trusted
 shells; the SCORM sandbox supports a basic completion bridge, not full conformance.
 
-## 1.12.1 — 2026-09-29
+<a id="1-12-1-2026-09-29"></a><a id="1121--2026-09-29"></a>
+
+## 1.12.1
 
 Initial public GitHub release of Sapiqo LMS by Miguel Guhlin.
 

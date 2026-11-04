@@ -36,7 +36,9 @@ Windows, MySQL, Docker, cron, and upgrade instructions.
 
 ---
 
-## Recent updates (September 2026)
+<a id="recent-updates-september-2026"></a>
+
+## Recent updates
 
 - **Safe concurrent editing** — the visual editor now guards against two people
   overwriting each other: a soft per‑course **lock/lease** (with *Take over* and a
@@ -280,6 +282,6 @@ scope. Back up course content separately from the data backup.
 
 ## License
 
-Sapiqo LMS © 2026 Miguel Guhlin. Original project material is licensed under
+Sapiqo LMS © Miguel Guhlin. Original project material is licensed under
 [CC BY-SA 4.0](../LICENSE). Bundled fonts retain their original licenses; see
 [third-party notices](../THIRD_PARTY_NOTICES.md).

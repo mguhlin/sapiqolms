@@ -1,6 +1,6 @@
 # Operating Sapiqo LMS 1.13
 
-© 2026 Miguel Guhlin · CC BY-SA 4.0
+© Miguel Guhlin · CC BY-SA 4.0
 
 ## Install and prepare
 

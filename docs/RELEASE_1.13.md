@@ -1,6 +1,6 @@
 # Sapiqo LMS 1.13.0 verification
 
-© 2026 Miguel Guhlin · CC BY-SA 4.0 · September 30, 2026
+© Miguel Guhlin · CC BY-SA 4.0
 
 This implements the first substantial delivery across the planned roadmap.
 It does not claim the real-provider, independent accessibility or

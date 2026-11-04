@@ -10,7 +10,7 @@ and issue badges and CPE certificates.
 [User manual](sapiqo/docs/manual/README.md) · [Code audit](docs/CODE_AUDIT.md) ·
 [Planned roadmap](docs/ROADMAP.md)**
 
-Version **1.13.1**. Original project material: **© 2026 Miguel Guhlin · CC BY-SA 4.0**.
+Version **1.13.1**. Original project material: **© Miguel Guhlin · CC BY-SA 4.0**.
 
 GitHub Pages hosts the project introduction. To run the LMS, install it on a PHP
 server or use Docker; Pages cannot execute PHP or store learner accounts.
@@ -140,7 +140,7 @@ language, and certificate signatory / CPE provider line.
 
 ## License
 
-Sapiqo LMS © 2026 Miguel Guhlin, licensed under
+Sapiqo LMS © Miguel Guhlin, licensed under
 [Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
 You may share and adapt it, including commercially, as long as you give
 attribution to "Sapiqo LMS by Miguel Guhlin" and license your derivatives under

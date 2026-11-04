@@ -1,11 +1,10 @@
 # Compatibility and validation matrix
 
-© 2026 Miguel Guhlin · CC BY-SA 4.0
+© Miguel Guhlin · CC BY-SA 4.0
 
 For 1.13.0, “tested” means the specific checks below, not complete certification.
 The [Verify workflow](../.github/workflows/verify.yml) gates Pages deployment.
-All six jobs passed in the [1.13.0 release run](https://github.com/mguhlin/sapiqolms/actions/runs/36725641715)
-on September 30, 2026. See [the roadmap's remaining work](ROADMAP.md#current-release-and-remaining-work)
+All six jobs passed in the [1.13.0 release run](https://github.com/mguhlin/sapiqolms/actions/runs/36725641715). See [the roadmap's remaining work](ROADMAP.md#current-release-and-remaining-work)
 for the next validation priorities.
 
 | Area | Evidence / scope | Status |

@@ -1,6 +1,6 @@
 # Pilot and accessibility validation protocol
 
-© 2026 Miguel Guhlin · CC BY-SA 4.0
+© Miguel Guhlin · CC BY-SA 4.0
 
 Use two or three participating organizations, separate installations where
 organizational isolation is required, synthetic data for technical tests, and

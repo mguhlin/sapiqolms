@@ -128,7 +128,7 @@
   <footer class="site-footer"><div class="wrap">
     <?php if (($cfg['org_name'] ?? '') !== ''): ?>&copy; <?= date('Y') ?> <?= e($cfg['org_name']) ?>. <?php endif; ?>
     <a href="<?= e(url('/privacy')) ?>">Privacy &amp; data protection</a>
-    <div style="margin-top:6px;font-size:.85rem;opacity:.85">Sapiqo LMS &copy; 2026 Miguel Guhlin · Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC&nbsp;BY-SA&nbsp;4.0</a></div>
+    <div style="margin-top:6px;font-size:.85rem;opacity:.85">Sapiqo LMS &copy; Miguel Guhlin · Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC&nbsp;BY-SA&nbsp;4.0</a></div>
   </div></footer>
 </body>
 </html>

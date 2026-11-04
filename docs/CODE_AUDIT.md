@@ -1,9 +1,10 @@
-# Code audit — September 29, 2026
+<a id="code-audit-september-29-2026"></a><a id="code-audit--september-29-2026"></a>
 
+# Code audit
 > Historical baseline for 1.12.1. Subsequent fixes and current limitations are
 > recorded in [1.13 release verification](RELEASE_1.13.md).
 
-**Publication:** Sapiqo LMS 1.12.1, © 2026 Miguel Guhlin.
+**Publication:** Sapiqo LMS 1.12.1, © Miguel Guhlin.
 
 ## Scope and method
 
@@ -115,4 +116,4 @@ This scan cannot prove the original authorship or tooling of every asset.
 
 Actual third-party component names and copyright notices are retained, including
 optional Whisper documentation and the bundled Inter, Poppins, and DejaVu font
-licenses. Original project material is CC BY-SA 4.0, © 2026 Miguel Guhlin.
+licenses. Original project material is CC BY-SA 4.0, © Miguel Guhlin.

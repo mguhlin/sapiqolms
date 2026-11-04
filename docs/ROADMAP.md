@@ -1,6 +1,6 @@
 # Sapiqo LMS planned roadmap
 
-© 2026 Miguel Guhlin · CC BY-SA 4.0
+© Miguel Guhlin · CC BY-SA 4.0
 
 ## Product direction
 
@@ -16,7 +16,7 @@ will be recorded below as work lands.
 
 ## Current release and remaining work
 
-Updated September 30, 2026. [Version 1.13.0](https://github.com/mguhlin/sapiqolms/releases/tag/v1.13.0)
+[Version 1.13.0](https://github.com/mguhlin/sapiqolms/releases/tag/v1.13.0)
 delivered the main account-security, recovery, authoring and teaching features.
 All six [release verification jobs](https://github.com/mguhlin/sapiqolms/actions/runs/36725641715)
 passed: PHP 8.1/8.3/8.4, Chromium, MariaDB and Docker/Apache. Complete

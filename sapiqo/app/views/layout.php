@@ -102,7 +102,7 @@
     <?php $blogUrl = safe_url((string) (lms_config()['org_blog_url'] ?? '')); if ($blogUrl !== ''): ?>
     · <a href="<?= e($blogUrl) ?>" target="_blank" rel="noopener">Blog</a>
     <?php endif; ?>
-    <div style="margin-top:6px;font-size:.85rem;opacity:.85">Sapiqo LMS &copy; 2026 Miguel Guhlin · Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC&nbsp;BY-SA&nbsp;4.0</a></div>
+    <div style="margin-top:6px;font-size:.85rem;opacity:.85">Sapiqo LMS &copy; Miguel Guhlin · Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC&nbsp;BY-SA&nbsp;4.0</a></div>
   </div>
 </footer>
 <script src="<?= e(url('/assets/js/app.js')) ?>"></script>
