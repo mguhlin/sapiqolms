@@ -189,8 +189,8 @@
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--navy-500);
 }
 .lesson-head h1 {
